@@ -43,23 +43,30 @@
       <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 4C12 4 6 8 6 14c0 3 2 5 5 5 6 0 9-7 9-15Z"/><path d="M4 21c2-5 6-8 12-11"/></symbol>
       <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0M18 8v6M15 11h6"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M15 8l2 2M17 6l2 2"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5.2-3.2 8.3-8 10-4.8-1.7-8-4.8-8-10V6Z"/><path d="m9 12 2 2 4-5"/></symbol>
+      <symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M16 12v1.5a2.5 2.5 0 0 1-5 0V12a2.5 2.5 0 0 1 5 0Zm0 0V8.5"/><path d="M16 15.5c1.5 0 3-1.2 3-3.5"/></symbol>
     </defs>
   </svg>
   <div id="network-banner" class="network-banner hidden">Sin conexión · usando modo local</div>
+  <div id="app-toast" class="app-toast" role="status" aria-live="polite"></div>
   <div class="app-shell entry-mode">
   <div class="ambient-layer" id="ambient-layer" data-scene="login" aria-hidden="true">
-    <span class="ambient-icon" style="--x:7%;--duration:17s;--delay:-4s;--size:21px;--drift:18px"><svg><use href="#i-sparkles"/></svg></span>
-    <span class="ambient-icon" style="--x:19%;--duration:23s;--delay:-18s;--size:27px;--drift:-16px"><svg><use href="#i-heart"/></svg></span>
-    <span class="ambient-icon" style="--x:34%;--duration:20s;--delay:-9s;--size:18px;--drift:11px"><svg><use href="#i-calendar"/></svg></span>
-    <span class="ambient-icon" style="--x:48%;--duration:26s;--delay:-14s;--size:24px;--drift:-10px"><svg><use href="#i-message"/></svg></span>
-    <span class="ambient-icon" style="--x:63%;--duration:19s;--delay:-12s;--size:20px;--drift:16px"><svg><use href="#i-user"/></svg></span>
-    <span class="ambient-icon" style="--x:78%;--duration:24s;--delay:-3s;--size:29px;--drift:-18px"><svg><use href="#i-heart-pulse"/></svg></span>
-    <span class="ambient-icon" style="--x:91%;--duration:21s;--delay:-16s;--size:17px;--drift:9px"><svg><use href="#i-sparkles"/></svg></span>
-    <span class="ambient-icon ambient-gold" style="--x:13%;--duration:29s;--delay:-22s;--size:16px;--drift:-8px"><svg><use href="#i-leaf"/></svg></span>
-    <span class="ambient-icon ambient-gold" style="--x:41%;--duration:25s;--delay:-6s;--size:19px;--drift:14px"><svg><use href="#i-target"/></svg></span>
-    <span class="ambient-icon ambient-gold" style="--x:70%;--duration:28s;--delay:-20s;--size:17px;--drift:-13px"><svg><use href="#i-clock"/></svg></span>
-    <span class="ambient-icon" style="--x:86%;--duration:18s;--delay:-10s;--size:23px;--drift:12px"><svg><use href="#i-bell"/></svg></span>
-    <span class="ambient-icon ambient-gold" style="--x:56%;--duration:31s;--delay:-27s;--size:14px;--drift:-7px"><svg><use href="#i-bookmark"/></svg></span>
+    <!-- Motivos grandes: el mismo icono de la sección cae en loop a distintas velocidades. -->
+    <span class="ambient-motif motif-main" style="--x:-8%;--duration:22s;--delay:-4s;--size:118px;--drift:26px;--rot:-12deg"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-motif motif-main" style="--x:24%;--duration:28s;--delay:-19s;--size:84px;--drift:-18px;--rot:8deg"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-motif motif-main" style="--x:57%;--duration:24s;--delay:-11s;--size:142px;--drift:20px;--rot:-5deg"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-motif motif-main" style="--x:80%;--duration:31s;--delay:-25s;--size:102px;--drift:-24px;--rot:11deg"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-motif motif-main" style="--x:8%;--duration:34s;--delay:-30s;--size:72px;--drift:14px;--rot:4deg"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-motif motif-main" style="--x:67%;--duration:26s;--delay:-6s;--size:76px;--drift:13px;--rot:-8deg"><svg><use href="#i-sparkles"/></svg></span>
+    <!-- Motivo secundario: acompaña sin competir con el principal. -->
+    <span class="ambient-motif motif-secondary" style="--x:44%;--duration:36s;--delay:-15s;--size:64px;--drift:-11px;--rot:8deg"><svg><use href="#i-heart"/></svg></span>
+    <span class="ambient-motif motif-secondary" style="--x:88%;--duration:39s;--delay:-33s;--size:58px;--drift:15px;--rot:-6deg"><svg><use href="#i-heart"/></svg></span>
+    <!-- Acentos pequeños para conservar la textura de v3.2.1. -->
+    <span class="ambient-icon" style="--x:15%;--duration:17s;--delay:-12s;--size:19px;--drift:12px"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-icon ambient-gold" style="--x:52%;--duration:21s;--delay:-7s;--size:16px;--drift:-9px"><svg><use href="#i-sparkles"/></svg></span>
+    <span class="ambient-icon" style="--x:75%;--duration:19s;--delay:-16s;--size:20px;--drift:10px"><svg><use href="#i-sparkles"/></svg></span>
   </div>
     <header class="topbar">
       <button class="icon-btn" data-nav="home" aria-label="Inicio"><svg class="ui-icon"><use href="#i-home"/></svg></button>
@@ -80,18 +87,66 @@
             <p class="muted">Ingresa para continuar tu orientación, seguimiento y próximos pasos.</p>
           </div>
 
-          <form id="login-form" class="login-card">
-            <div class="login-card-head">
-              <span class="icon-tile"><svg class="ui-icon"><use href="#i-lock"/></svg></span>
-              <span><small>ACCESO</small><b>Bienvenido de nuevo</b></span>
+          <div class="login-card auth-card" id="auth-card">
+            <div class="auth-mode-switch" role="tablist" aria-label="Acceso D’Lorgia">
+              <button class="active" type="button" data-auth-mode="login" role="tab" aria-selected="true">Ingresar</button>
+              <button type="button" data-auth-mode="register" role="tab" aria-selected="false">Crear cuenta</button>
+              <span class="auth-switch-glider" aria-hidden="true"></span>
             </div>
-            <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-mail"/></svg></span><input id="login-user" autocomplete="username" placeholder="Correo o usuario" required /></label>
-            <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-lock"/></svg></span><input id="login-password" type="password" autocomplete="current-password" placeholder="Clave de acceso" required /><button class="field-action" id="toggle-password" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
-            <label class="remember-row"><input id="login-remember" type="checkbox" /> <span>Recordar este acceso en este dispositivo</span></label>
-            <button class="primary full login-submit" type="submit">Ingresar a mi recorrido <svg class="ui-icon"><use href="#i-arrow-right"/></svg></button>
-            <button class="ghost full guest-entry" id="guest-entry" type="button">Explorar como invitado</button>
-            <p class="login-note"><svg class="ui-icon"><use href="#i-info"/></svg><span>Acceso demostrativo del prototipo académico. La clave no se guarda ni se envía.</span></p>
-          </form>
+
+            <form id="login-form" class="auth-form active" data-auth-panel="login">
+              <div class="login-card-head">
+                <span class="icon-tile"><svg class="ui-icon"><use href="#i-lock"/></svg></span>
+                <span><small>ACCESO</small><b>Bienvenido de nuevo</b></span>
+              </div>
+              <div id="login-feedback" class="auth-feedback" aria-live="polite"></div>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-mail"/></svg></span><input id="login-user" autocomplete="username" placeholder="Correo o usuario" required /></label>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-lock"/></svg></span><input id="login-password" type="password" autocomplete="current-password" placeholder="Clave de acceso" required /><button class="field-action" data-toggle-password="#login-password" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
+              <div class="auth-row">
+                <label class="remember-row"><input id="login-remember" type="checkbox" /> <span>Recordarme</span></label>
+                <button class="auth-link" id="forgot-access" type="button">Olvidé mi clave</button>
+              </div>
+              <button class="primary full login-submit auth-submit" type="submit"><span>Ingresar a mi recorrido</span><svg class="ui-icon"><use href="#i-arrow-right"/></svg></button>
+              <button class="ghost full guest-entry" id="guest-entry" type="button">Explorar como invitado</button>
+              <p class="login-note"><svg class="ui-icon"><use href="#i-shield"/></svg><span>Las cuentas de este prototipo se guardan solo en este navegador. La contraseña se deriva con Web Crypto y no se guarda como texto.</span></p>
+            </form>
+
+            <form id="register-form" class="auth-form" data-auth-panel="register">
+              <div class="login-card-head">
+                <span class="icon-tile"><svg class="ui-icon"><use href="#i-user-plus"/></svg></span>
+                <span><small>NUEVA CUENTA</small><b>Crea tu espacio D’Lorgia</b></span>
+              </div>
+              <div id="register-feedback" class="auth-feedback" aria-live="polite"></div>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-user"/></svg></span><input id="register-name" autocomplete="name" placeholder="Nombre o alias" maxlength="60" required /></label>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-mail"/></svg></span><input id="register-email" type="email" autocomplete="email" placeholder="Correo" maxlength="120" required /></label>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-at"/></svg></span><input id="register-username" autocomplete="username" placeholder="Usuario (ej. cunta19)" maxlength="30" required /></label>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-key"/></svg></span><input id="register-password" type="password" autocomplete="new-password" placeholder="Crea una clave" minlength="8" required /><button class="field-action" data-toggle-password="#register-password" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
+              <div class="password-meter" id="password-meter"><span></span><small>Usa 8+ caracteres y combina letras, números o símbolos.</small></div>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-circle-check"/></svg></span><input id="register-confirm" type="password" autocomplete="new-password" placeholder="Repite la clave" minlength="8" required /><button class="field-action" data-toggle-password="#register-confirm" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
+              <button class="primary full login-submit auth-submit" type="submit"><span>Crear mi espacio</span><svg class="ui-icon"><use href="#i-arrow-right"/></svg></button>
+              <p class="login-note"><svg class="ui-icon"><use href="#i-info"/></svg><span>Registro funcional del prototipo: separa tu perfil, historial, guardados y recordatorios por cuenta en este dispositivo.</span></p>
+            </form>
+
+            <form id="reset-form" class="auth-form" data-auth-panel="reset">
+              <div class="login-card-head">
+                <span class="icon-tile"><svg class="ui-icon"><use href="#i-key"/></svg></span>
+                <span><small>RECUPERACIÓN LOCAL</small><b>Restablece tu acceso</b></span>
+              </div>
+              <div id="reset-feedback" class="auth-feedback" aria-live="polite"></div>
+              <p class="auth-help">Busca una cuenta guardada en este navegador y crea una nueva clave. En producción esto se validaría por correo u OTP.</p>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-mail"/></svg></span><input id="reset-user" autocomplete="username" placeholder="Correo o usuario" required /></label>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-key"/></svg></span><input id="reset-password" type="password" autocomplete="new-password" placeholder="Nueva clave" minlength="8" required /><button class="field-action" data-toggle-password="#reset-password" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
+              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-circle-check"/></svg></span><input id="reset-confirm" type="password" autocomplete="new-password" placeholder="Repite la nueva clave" minlength="8" required /></label>
+              <button class="primary full auth-submit" type="submit"><span>Guardar nueva clave</span><svg class="ui-icon"><use href="#i-circle-check"/></svg></button>
+              <button class="ghost full auth-link-back" type="button" data-auth-mode="login">Volver al ingreso</button>
+            </form>
+
+            <div class="auth-success-layer" id="auth-success" aria-hidden="true">
+              <span class="auth-success-icon"><svg class="ui-icon"><use href="#i-circle-check"/></svg></span>
+              <b id="auth-success-title">Listo</b><small>Preparando tu recorrido…</small>
+              <i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
 
           <div class="login-trust"><span><svg class="ui-icon"><use href="#i-circle-check"/></svg> Orientación clara</span><span><svg class="ui-icon"><use href="#i-stethoscope"/></svg> Decisión profesional</span></div>
         </div>
@@ -236,7 +291,7 @@
           </div>
           <form id="chat-form" class="chat-form">
             <input id="chat-input" placeholder="Escribe tu duda…" autocomplete="off" maxlength="500" />
-            <button class="primary" type="submit">Enviar</button>
+            <button class="primary" type="submit"><span>Enviar</span><svg class="ui-icon"><use href="#i-sparkles"/></svg></button>
           </form>
           <div id="last-answer-meta" class="answer-meta hidden"></div>
           <div class="action-row">
@@ -334,7 +389,7 @@
         <div class="panel"><div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-clock"/></svg></span><div><p class="eyebrow">PRÓXIMOS PASOS</p><h3>Alarmas activas</h3></div></div><div id="portal-reminders"></div><button class="secondary full" data-nav="followup">Gestionar recordatorios</button></div>
         <div class="panel"><div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-download"/></svg></span><div><p class="eyebrow">DOCUMENTOS</p><h3>Resumen de orientación</h3></div></div><p class="muted">Descarga el último resumen como referencia personal del prototipo.</p><button class="secondary full" id="portal-download">Descargar último resumen</button></div>
         <div class="panel install-panel"><div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-home"/></svg></span><div><p class="eyebrow">APP INSTALABLE</p><h3>Lleva D’Lorgia contigo</h3></div></div><p class="muted">Instala este prototipo como app web en tu dispositivo y conserva acceso básico aun con conexión inestable.</p><button class="secondary full" id="install-app" type="button">Instalar D’Lorgia Orienta</button><small id="install-status" class="microcopy"></small></div>
-        <div class="panel session-panel"><div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-logout"/></svg></span><div><p class="eyebrow">SESIÓN DEMO</p><h3>Acceso al prototipo</h3></div></div><p class="muted">Cerrar sesión vuelve a la pantalla de ingreso sin borrar tu recorrido, historial ni recordatorios.</p><button class="secondary full" id="logout-app" type="button">Cerrar sesión</button></div>
+        <div class="panel session-panel"><div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-shield"/></svg></span><div><p class="eyebrow">CUENTA Y SESIÓN</p><h3>Tu acceso al prototipo</h3></div></div><div id="account-summary" class="account-summary"></div><p class="muted">Al usar una cuenta, tu perfil, historial, guardados y recordatorios quedan separados de otras cuentas guardadas en este navegador.</p><button class="secondary full" id="logout-app" type="button"><svg class="ui-icon"><use href="#i-logout"/></svg> Cerrar sesión</button></div>
       </section>
     </main>
 

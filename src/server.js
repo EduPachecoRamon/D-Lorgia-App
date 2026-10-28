@@ -146,14 +146,14 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/status') {
     return json(res, 200, {
       service: "D'Lorgia Orienta",
-      version: '3.2.0',
+      version: '3.3.0',
       status: 'ok',
       whatsappConfigured: Boolean(config.accessToken && config.phoneNumberId),
       aiConfigured: getAIState().configured,
       aiProvider: getAIState().provider,
       aiModel: getAIState().model,
       assistantAvailable: true,
-      modules: ['tratamientos', 'orientación', 'asesor personalizado', 'agenda', 'seguimiento', 'alarmas', 'mi espacio', 'evaluación'],
+      modules: ['tratamientos', 'orientación', 'asesor personalizado', 'agenda', 'seguimiento', 'alarmas', 'mi espacio', 'evaluación', 'registro local', 'sesión por cuenta'],
       scheduling: getSchedulingInfo()
     });
   }

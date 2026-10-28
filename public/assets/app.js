@@ -1,18 +1,42 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
-const store = {
+const rawStore = {
   get(key, fallback = null) {
     try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
     catch { return fallback; }
   },
-  set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+  set(key, value) { localStorage.setItem(key, JSON.stringify(value)); },
+  remove(key) { localStorage.removeItem(key); }
+};
+
+const AUTH_ACCOUNTS_KEY = 'dlorgia:auth:accounts:v1';
+const AUTH_PERSIST_KEY = 'dlorgia:auth:persisted:v1';
+const AUTH_SESSION_KEY = 'dlorgia:auth:session:v1';
+const LEGACY_MIGRATION_KEY = 'dlorgia:auth:legacyMigrated:v1';
+const USER_SCOPED_KEYS = new Set([
+  'dlorgia:lastOrientation', 'dlorgia:history', 'dlorgia:profile', 'dlorgia:reminders:v3',
+  'dlorgia:savedTreatments', 'dlorgia:advisorMemory:v1', 'dlorgia:preferences:v1',
+  'dlorgia:onboardingComplete', 'dlorgia:lastEvaluation'
+]);
+
+let activeIdentity = null;
+
+function scopedStorageKey(key) {
+  if (activeIdentity?.kind === 'account' && USER_SCOPED_KEYS.has(key)) return `${key}:account:${activeIdentity.id}`;
+  return key;
+}
+
+const store = {
+  get(key, fallback = null) { return rawStore.get(scopedStorageKey(key), fallback); },
+  set(key, value) { rawStore.set(scopedStorageKey(key), value); },
+  remove(key) { rawStore.remove(scopedStorageKey(key)); }
 };
 
 let catalog = [];
 let config = {};
-let currentOrientation = store.get('dlorgia:lastOrientation');
-let selectedTreatment = currentOrientation?.treatment?.id || null;
+let currentOrientation = null;
+let selectedTreatment = null;
 let advisorFocus = 'orientacion';
 let navStack = ['home'];
 let activeCategory = 'Todas';
@@ -63,33 +87,201 @@ function icon(name, className = 'ui-icon') {
 }
 
 const ambientScenes = {
-  login: ['sparkles','heart','lock','leaf','user','mail'],
-  onboarding: ['sparkles','heart','user','calendar','leaf','target'],
-  home: ['sparkles','heart-pulse','calendar','message','leaf','user'],
-  catalog: ['scan','sparkles','target','heart','leaf','bookmark'],
-  detail: ['sparkles','scan','target','heart','stethoscope','bookmark'],
-  calculator: ['target','sparkles','clock','heart','check','scan'],
-  assistant: ['sparkles','message','heart','user','stethoscope','leaf'],
-  summary: ['file','check','bookmark','sparkles','heart','calendar'],
-  evaluation: ['stethoscope','calendar','check','clock','heart','user'],
-  followup: ['bell','clock','calendar','check','heart-pulse','bookmark'],
-  portal: ['user','bookmark','file','bell','calendar','heart']
+  login: { primary: 'sparkles', secondary: 'leaf', accents: ['sparkles','heart','lock'] },
+  onboarding: { primary: 'sparkles', secondary: 'heart', accents: ['sparkles','heart','calendar'] },
+  home: { primary: 'sparkles', secondary: 'heart-pulse', accents: ['sparkles','calendar','heart'] },
+  catalog: { primary: 'scan', secondary: 'sparkles', accents: ['scan','target','sparkles'] },
+  detail: { primary: 'sparkles', secondary: 'scan', accents: ['sparkles','target','heart'] },
+  calculator: { primary: 'target', secondary: 'clock', accents: ['target','sparkles','clock'] },
+  assistant: { primary: 'sparkles', secondary: 'message', accents: ['sparkles','message','heart'] },
+  summary: { primary: 'file', secondary: 'check', accents: ['file','check','bookmark'] },
+  evaluation: { primary: 'stethoscope', secondary: 'calendar', accents: ['stethoscope','calendar','check'] },
+  followup: { primary: 'clock', secondary: 'bell', accents: ['clock','bell','calendar'] },
+  portal: { primary: 'user', secondary: 'bookmark', accents: ['user','file','bell'] }
 };
 
 function setAmbientScene(scene) {
   const layer = $('#ambient-layer');
   if (!layer) return;
   layer.dataset.scene = scene;
-  const names = ambientScenes[scene] || ambientScenes.home;
-  $$('.ambient-icon use').forEach((use, index) => use.setAttribute('href', `#i-${names[index % names.length]}`));
+  const theme = ambientScenes[scene] || ambientScenes.home;
+  $$('.motif-main use').forEach((use) => use.setAttribute('href', `#i-${theme.primary}`));
+  $$('.motif-secondary use').forEach((use) => use.setAttribute('href', `#i-${theme.secondary}`));
+  $$('.ambient-icon use').forEach((use, index) => use.setAttribute('href', `#i-${theme.accents[index % theme.accents.length]}`));
 }
 
 function hasEntryAccess() {
-  return store.get('dlorgia:entryComplete', false) || sessionStorage.getItem('dlorgia:sessionEntry') === '1';
+  return Boolean(activeIdentity);
+}
+
+function getAccounts() { return rawStore.get(AUTH_ACCOUNTS_KEY, []); }
+function setAccounts(accounts) { rawStore.set(AUTH_ACCOUNTS_KEY, accounts); }
+function normalizeIdentifier(value = '') { return String(value).trim().toLowerCase(); }
+function usernameIsValid(value = '') { return /^[a-z0-9._-]{3,30}$/i.test(String(value).trim()); }
+function passwordStrength(password = '') {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password) || password.length >= 12) score++;
+  return score;
+}
+function bytesToBase64(bytes) {
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+function base64ToBytes(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+function randomSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return bytesToBase64(bytes);
+}
+async function derivePassword(password, salt) {
+  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: base64ToBytes(salt), iterations: 120000, hash: 'SHA-256' }, material, 256);
+  return bytesToBase64(new Uint8Array(bits));
+}
+function findAccount(identifier) {
+  const needle = normalizeIdentifier(identifier);
+  return getAccounts().find((account) => account.email === needle || account.username === needle) || null;
+}
+function publicIdentity(account) {
+  return { kind: 'account', id: account.id, name: account.name, email: account.email, username: account.username };
+}
+function migrateLegacyData(accountId) {
+  if (rawStore.get(LEGACY_MIGRATION_KEY)) return;
+  let copied = false;
+  for (const key of USER_SCOPED_KEYS) {
+    const legacy = localStorage.getItem(key);
+    const scoped = `${key}:account:${accountId}`;
+    if (legacy !== null && localStorage.getItem(scoped) === null) {
+      localStorage.setItem(scoped, legacy);
+      copied = true;
+    }
+  }
+  rawStore.set(LEGACY_MIGRATION_KEY, { accountId, copied, at: new Date().toISOString() });
+}
+function loadUserState() {
+  currentOrientation = store.get('dlorgia:lastOrientation');
+  selectedTreatment = currentOrientation?.treatment?.id || null;
+  if (selectedTreatment && $('#treatment-select')) $('#treatment-select').value = selectedTreatment;
+  if (currentOrientation?.treatment?.name && $('#eval-interest')) $('#eval-interest').value = currentOrientation.treatment.name;
+}
+function writeSession(identity, remember = false) {
+  localStorage.removeItem(AUTH_PERSIST_KEY);
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  const payload = JSON.stringify({ kind: identity.kind, accountId: identity.id || null, issuedAt: new Date().toISOString() });
+  if (remember && identity.kind === 'account') localStorage.setItem(AUTH_PERSIST_KEY, payload);
+  else sessionStorage.setItem(AUTH_SESSION_KEY, payload);
+}
+function restoreAuthSession() {
+  const raw = localStorage.getItem(AUTH_PERSIST_KEY) || sessionStorage.getItem(AUTH_SESSION_KEY);
+  if (!raw) return false;
+  try {
+    const session = JSON.parse(raw);
+    if (session.kind === 'guest') {
+      activeIdentity = { kind: 'guest', id: 'guest', name: 'Invitado' };
+      loadUserState();
+      return true;
+    }
+    const account = getAccounts().find((item) => item.id === session.accountId);
+    if (!account) throw new Error('Cuenta no disponible');
+    activeIdentity = publicIdentity(account);
+    migrateLegacyData(account.id);
+    loadUserState();
+    return true;
+  } catch {
+    localStorage.removeItem(AUTH_PERSIST_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    activeIdentity = null;
+    return false;
+  }
+}
+function clearAuthSession() {
+  localStorage.removeItem(AUTH_PERSIST_KEY);
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  activeIdentity = null;
+  currentOrientation = null;
+  selectedTreatment = null;
+}
+function loginGuest() {
+  activeIdentity = { kind: 'guest', id: 'guest', name: 'Invitado' };
+  writeSession(activeIdentity, false);
+  loadUserState();
+}
+function setAuthFeedback(id, message = '', success = false) {
+  const box = $(id);
+  if (!box) return;
+  box.textContent = message;
+  box.classList.toggle('show', Boolean(message));
+  box.classList.toggle('success', Boolean(message) && success);
+}
+function shakeAuthCard() {
+  const card = $('#auth-card');
+  if (!card) return;
+  card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+}
+function toast(message, type = '') {
+  const el = $('#app-toast');
+  if (!el) return;
+  el.textContent = message;
+  el.className = `app-toast show ${type}`.trim();
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { el.className = 'app-toast'; }, 2600);
+}
+function setAuthMode(mode) {
+  const switcher = $('.auth-mode-switch');
+  if (switcher) {
+    switcher.classList.toggle('register', mode === 'register');
+    switcher.classList.toggle('reset', mode === 'reset');
+  }
+  $$('[data-auth-mode]').forEach((btn) => {
+    const active = btn.dataset.authMode === mode && mode !== 'reset';
+    if (btn.closest('.auth-mode-switch')) {
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', String(active));
+    }
+  });
+  $$('[data-auth-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.authPanel === mode));
+  setAuthFeedback('#login-feedback'); setAuthFeedback('#register-feedback'); setAuthFeedback('#reset-feedback');
+}
+async function authSuccess(title) {
+  const layer = $('#auth-success');
+  if (!layer) return;
+  $('#auth-success-title').textContent = title;
+  layer.classList.add('show');
+  await new Promise((resolve) => setTimeout(resolve, 650));
+  layer.classList.remove('show');
+}
+async function createAccount({ name, email, username, password }) {
+  const normalizedEmail = normalizeIdentifier(email);
+  const normalizedUsername = normalizeIdentifier(username);
+  if (!name.trim()) throw new Error('Escribe tu nombre o alias.');
+  if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw new Error('Usa un correo válido.');
+  if (!usernameIsValid(normalizedUsername)) throw new Error('El usuario debe tener 3–30 caracteres: letras, números, punto, guion o guion bajo.');
+  if (getAccounts().some((a) => a.email === normalizedEmail)) throw new Error('Ese correo ya tiene una cuenta en este dispositivo.');
+  if (getAccounts().some((a) => a.username === normalizedUsername)) throw new Error('Ese nombre de usuario ya está ocupado en este dispositivo.');
+  if (passwordStrength(password) < 2) throw new Error('La clave es demasiado débil. Usa al menos 8 caracteres y combínalos.');
+  const salt = randomSalt();
+  const passwordHash = await derivePassword(password, salt);
+  const account = { id: crypto.randomUUID(), name: name.trim().slice(0, 60), email: normalizedEmail, username: normalizedUsername, salt, passwordHash, createdAt: new Date().toISOString(), passwordUpdatedAt: new Date().toISOString() };
+  setAccounts([...getAccounts(), account]);
+  return account;
+}
+async function verifyAccount(identifier, password) {
+  const account = findAccount(identifier);
+  if (!account) return null;
+  const candidate = await derivePassword(password, account.salt);
+  return candidate === account.passwordHash ? account : null;
 }
 
 function enterExperience() {
   const next = store.get('dlorgia:onboardingComplete', false) ? 'home' : 'onboarding';
+  if (next === 'onboarding') applyOnboarding();
   navStack = [next];
   show(next, false);
 }
@@ -336,6 +528,7 @@ function addBubble(text, who = 'bot') {
   el.textContent = text;
   $('#chat-log').appendChild(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
 }
 
 function advisorContextText() {
@@ -357,18 +550,22 @@ function advisorContextText() {
 async function sendQuestion(text) {
   rememberAdvisor('user', text);
   addBubble(text, 'user');
-  addBubble('Estoy revisando tu contexto…', 'bot');
-  const pending = $('#chat-log').lastElementChild;
+  const pending = addBubble('', 'bot thinking');
+  pending.innerHTML = '<span>Estoy revisando tu contexto</span><span class="typing-dots" aria-label="Consultando"><i></i><i></i><i></i></span>';
   const submit = $('#chat-form button[type="submit"]');
+  const chatPanel = $('.chat-panel');
   const meta = $('#last-answer-meta');
   if (meta) meta.classList.add('hidden');
-  if (submit) { submit.disabled = true; submit.textContent = 'Consultando…'; }
+  if (chatPanel) chatPanel.classList.add('is-thinking');
+  if (submit) { submit.disabled = true; submit.classList.add('loading'); submit.innerHTML = '<span>Consultando</span>'; }
 
   try {
     const data = await api('/api/assistant', {
       method: 'POST',
       body: JSON.stringify({ message: text, context: advisorContextText() })
     });
+    pending.classList.remove('thinking');
+    pending.classList.add('answer-arrive');
     pending.textContent = data.answer || 'No pude generar una respuesta. Puedes continuar con una evaluación profesional.';
     rememberAdvisor('assistant', pending.textContent);
     if (meta) {
@@ -376,7 +573,10 @@ async function sendQuestion(text) {
       meta.textContent = label;
       meta.classList.remove('hidden');
     }
+    renderFollowUp();
   } catch (error) {
+    pending.classList.remove('thinking');
+    pending.classList.add('answer-arrive');
     pending.textContent = 'No pude conectar con el servicio en este momento. La orientación general sigue disponible y puedes continuar con una evaluación profesional.';
     if (meta) {
       meta.textContent = 'Conexión no disponible · modo seguro';
@@ -384,7 +584,8 @@ async function sendQuestion(text) {
     }
     console.error(error);
   } finally {
-    if (submit) { submit.disabled = false; submit.textContent = 'Enviar'; }
+    if (chatPanel) chatPanel.classList.remove('is-thinking');
+    if (submit) { submit.disabled = false; submit.classList.remove('loading'); submit.innerHTML = '<span>Enviar</span><svg class="ui-icon"><use href="#i-sparkles"></use></svg>'; }
   }
 }
 
@@ -451,15 +652,18 @@ function renderReminderList(target, limit = 50) {
 
 function renderFollowUp() {
   const evalData = store.get('dlorgia:lastEvaluation');
+  const reminders = getReminders();
+  const hasFollowup = reminders.length > 0;
+  const hasAdvisorContinuity = getAdvisorMemory().some((item) => item.role === 'assistant');
   const treatment = currentOrientation?.treatment?.name || 'Orientación pendiente';
   const follow = $('#followup-content');
   if (follow) {
     follow.innerHTML = `
       <div class="panel"><p class="eyebrow">PROCESO ACTUAL</p><h3>${escapeHtml(treatment)}</h3><div class="timeline">
-        <div class="timeline-item ${currentOrientation ? 'done' : ''}"><span class="dot">${currentOrientation ? '✓' : '1'}</span><div><b>Orientación inicial</b><p>${currentOrientation ? 'Resumen generado y guardado en este dispositivo.' : 'Selecciona un tratamiento y genera tu orientación.'}</p></div></div>
+        <div class="timeline-item ${currentOrientation ? 'done' : ''}"><span class="dot">${currentOrientation ? '✓' : '1'}</span><div><b>Orientación inicial</b><p>${currentOrientation ? 'Resumen generado y guardado en tu espacio.' : 'Selecciona un tratamiento y genera tu orientación.'}</p></div></div>
         <div class="timeline-item ${evalData ? 'done' : ''}"><span class="dot">${evalData ? '✓' : '2'}</span><div><b>Evaluación profesional</b><p>${evalData ? `Solicitud preparada para ${escapeHtml(evalData.branch)}${evalData.date ? ` · ${escapeHtml(evalData.date)}` : ''}.` : 'Pendiente. El equipo profesional confirma la decisión clínica.'}</p></div></div>
-        <div class="timeline-item"><span class="dot">3</span><div><b>Cuidados y seguimiento</b><p>Guarda recordatorios para revisar indicaciones y próximos pasos.</p></div></div>
-        <div class="timeline-item"><span class="dot">4</span><div><b>Continuidad</b><p>Registra dudas y vuelve al asesor cuando necesites comprender mejor el proceso.</p></div></div>
+        <div class="timeline-item ${hasFollowup ? 'done' : ''}"><span class="dot">${hasFollowup ? '✓' : '3'}</span><div><b>Cuidados y seguimiento</b><p>${hasFollowup ? `${reminders.length} recordatorio${reminders.length === 1 ? '' : 's'} guardado${reminders.length === 1 ? '' : 's'} para tu continuidad.` : 'Guarda recordatorios para revisar indicaciones y próximos pasos.'}</p></div></div>
+        <div class="timeline-item ${hasAdvisorContinuity ? 'done' : ''}"><span class="dot">${hasAdvisorContinuity ? '✓' : '4'}</span><div><b>Continuidad</b><p>${hasAdvisorContinuity ? 'Ya usaste el asesor como apoyo para comprender tu proceso.' : 'Registra dudas y vuelve al asesor cuando necesites comprender mejor el proceso.'}</p></div></div>
       </div></div>`;
   }
   renderReminderList($('#reminders-list'));
@@ -467,6 +671,15 @@ function renderFollowUp() {
 
 function renderPortal() {
   const profile = getProfile();
+  const accountBox = $('#account-summary');
+  if (accountBox) {
+    if (activeIdentity?.kind === 'account') {
+      const initials = (activeIdentity.name || activeIdentity.username || 'DL').split(/\s+/).slice(0,2).map((part) => part[0]).join('').toUpperCase();
+      accountBox.innerHTML = `<span class="account-avatar">${escapeHtml(initials || 'DL')}</span><span><b>${escapeHtml(activeIdentity.name || activeIdentity.username)}</b><small>@${escapeHtml(activeIdentity.username)} · ${escapeHtml(activeIdentity.email)}</small></span>`;
+    } else {
+      accountBox.innerHTML = `<span class="account-avatar">I</span><span><b>Modo invitado</b><small>Los datos usan el espacio local general de este navegador.</small></span>`;
+    }
+  }
   if ($('#profile-name')) $('#profile-name').value = profile.name || '';
   if ($('#profile-branch')) $('#profile-branch').value = profile.branch || 'huancayo';
 
@@ -635,6 +848,8 @@ async function registerServiceWorker() {
 }
 
 async function init() {
+  restoreAuthSession();
+  loadUserState();
   const [catResult, cfgResult] = await Promise.allSettled([api('/api/catalog'), api('/api/config')]);
 
   if (catResult.status === 'fulfilled') {
@@ -675,7 +890,7 @@ async function init() {
   updateNetworkState();
   registerServiceWorker();
 
-  const rememberedUser = store.get('dlorgia:loginUser', '');
+  const rememberedUser = rawStore.get('dlorgia:loginUser', '');
   if ($('#login-user') && rememberedUser) $('#login-user').value = rememberedUser;
 
   if (!hasEntryAccess()) {
@@ -693,37 +908,126 @@ async function init() {
 $$('[data-nav]').forEach((btn) => btn.addEventListener('click', () => show(btn.dataset.nav)));
 $$('[data-back]').forEach((btn) => btn.addEventListener('click', goBack));
 
-$('#login-form')?.addEventListener('submit', (event) => {
+$$('[data-auth-mode]').forEach((btn) => btn.addEventListener('click', () => setAuthMode(btn.dataset.authMode)));
+
+$('#forgot-access')?.addEventListener('click', () => {
+  if ($('#reset-user')) $('#reset-user').value = $('#login-user')?.value.trim() || '';
+  setAuthMode('reset');
+});
+
+$$('[data-toggle-password]').forEach((btn) => btn.addEventListener('click', () => {
+  const input = $(btn.dataset.togglePassword);
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+}));
+
+$('#register-password')?.addEventListener('input', (event) => {
+  const score = passwordStrength(event.target.value);
+  const meter = $('#password-meter');
+  if (meter) meter.dataset.score = String(score);
+});
+
+$('#login-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const user = $('#login-user').value.trim();
   const password = $('#login-password').value;
   if (!user || !password) return;
-  if ($('#login-remember').checked) {
-    store.set('dlorgia:entryComplete', true);
-    store.set('dlorgia:loginUser', user);
-  } else {
-    sessionStorage.setItem('dlorgia:sessionEntry', '1');
+  const submit = event.currentTarget.querySelector('.auth-submit');
+  setAuthFeedback('#login-feedback');
+  if (submit) submit.classList.add('loading');
+  try {
+    const account = await verifyAccount(user, password);
+    if (!account) throw new Error('Correo/usuario o clave incorrectos.');
+    activeIdentity = publicIdentity(account);
+    migrateLegacyData(account.id);
+    writeSession(activeIdentity, $('#login-remember').checked);
+    rawStore.set('dlorgia:loginUser', user);
+    loadUserState();
+    $('#login-password').value = '';
+    await authSuccess(`Hola, ${account.name}`);
+    toast('Sesión iniciada. Tu recorrido personal está listo.', 'success');
+    enterExperience();
+  } catch (error) {
+    setAuthFeedback('#login-feedback', error.message || 'No se pudo iniciar sesión.');
+    shakeAuthCard();
+  } finally {
+    if (submit) submit.classList.remove('loading');
   }
-  $('#login-password').value = '';
-  enterExperience();
 });
 
-$('#guest-entry')?.addEventListener('click', () => {
-  sessionStorage.setItem('dlorgia:sessionEntry', '1');
-  enterExperience();
+$('#register-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const name = $('#register-name').value.trim();
+  const email = $('#register-email').value.trim();
+  const username = $('#register-username').value.trim();
+  const password = $('#register-password').value;
+  const confirm = $('#register-confirm').value;
+  const submit = event.currentTarget.querySelector('.auth-submit');
+  setAuthFeedback('#register-feedback');
+  if (password !== confirm) {
+    setAuthFeedback('#register-feedback', 'Las claves no coinciden.'); shakeAuthCard(); return;
+  }
+  if (submit) submit.classList.add('loading');
+  try {
+    const account = await createAccount({ name, email, username, password });
+    activeIdentity = publicIdentity(account);
+    migrateLegacyData(account.id);
+    writeSession(activeIdentity, true);
+    rawStore.set('dlorgia:loginUser', account.email);
+    loadUserState();
+    if (!getProfile().name) store.set('dlorgia:profile', { ...getProfile(), name: account.name, branch: 'huancayo' });
+    await authSuccess('Tu espacio está creado');
+    toast('Cuenta creada. Ahora personalizamos tu recorrido.', 'success');
+    enterExperience();
+  } catch (error) {
+    setAuthFeedback('#register-feedback', error.message || 'No se pudo crear la cuenta.');
+    shakeAuthCard();
+  } finally {
+    if (submit) submit.classList.remove('loading');
+  }
 });
 
-$('#toggle-password')?.addEventListener('click', () => {
-  const input = $('#login-password');
-  if (!input) return;
-  input.type = input.type === 'password' ? 'text' : 'password';
+$('#reset-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const identifier = $('#reset-user').value.trim();
+  const password = $('#reset-password').value;
+  const confirm = $('#reset-confirm').value;
+  const submit = event.currentTarget.querySelector('.auth-submit');
+  setAuthFeedback('#reset-feedback');
+  if (password !== confirm) { setAuthFeedback('#reset-feedback', 'Las claves no coinciden.'); shakeAuthCard(); return; }
+  if (passwordStrength(password) < 2) { setAuthFeedback('#reset-feedback', 'La nueva clave necesita 8+ caracteres y una combinación más fuerte.'); shakeAuthCard(); return; }
+  const account = findAccount(identifier);
+  if (!account) { setAuthFeedback('#reset-feedback', 'No encontré esa cuenta guardada en este dispositivo.'); shakeAuthCard(); return; }
+  if (submit) submit.classList.add('loading');
+  try {
+    const salt = randomSalt();
+    const passwordHash = await derivePassword(password, salt);
+    const accounts = getAccounts().map((item) => item.id === account.id ? { ...item, salt, passwordHash, passwordUpdatedAt: new Date().toISOString() } : item);
+    setAccounts(accounts);
+    setAuthFeedback('#reset-feedback', 'Clave actualizada. Ya puedes ingresar.', true);
+    rawStore.set('dlorgia:loginUser', account.email);
+    $('#login-user').value = account.email;
+    $('#login-password').value = '';
+    setTimeout(() => setAuthMode('login'), 700);
+  } catch {
+    setAuthFeedback('#reset-feedback', 'No pude actualizar la clave en este navegador.');
+  } finally {
+    if (submit) submit.classList.remove('loading');
+  }
+});
+
+$('#guest-entry')?.addEventListener('click', async () => {
+  loginGuest();
+  await authSuccess('Modo invitado');
+  enterExperience();
 });
 
 $('#logout-app')?.addEventListener('click', () => {
-  localStorage.removeItem('dlorgia:entryComplete');
-  sessionStorage.removeItem('dlorgia:sessionEntry');
+  clearAuthSession();
+  setAuthMode('login');
   navStack = ['login'];
   show('login', false);
+  toast('Sesión cerrada. Tus datos locales siguen guardados.', 'success');
 });
 
 // Microinteracción breve: confirma el toque sin alterar la navegación.
@@ -830,7 +1134,7 @@ $('#eval-date')?.addEventListener('change', loadSchedule);
 $('#profile-form')?.addEventListener('submit', (event) => {
   event.preventDefault();
   store.set('dlorgia:profile', { name: $('#profile-name').value.trim(), branch: $('#profile-branch').value });
-  alert('Perfil del prototipo guardado en este navegador.');
+  toast('Perfil guardado en tu espacio.', 'success');
   renderPortal();
   renderAdvisor();
 });

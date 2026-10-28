@@ -1,13 +1,15 @@
-# D’Lorgia Orienta v3.2 — SUPER — App de orientación y acompañamiento
+# D’Lorgia Orienta v3.3 — LÓGICA TOTAL — App de orientación y acompañamiento
 
 Prototipo académico móvil centrado en una idea simple: **ayudar al paciente a comprender un tratamiento, organizar sus expectativas y continuar hacia una evaluación profesional sin convertir la IA en un médico virtual.**
 
 ## Módulos de la app
+- **Acceso y cuentas:** registro, login, recuperación local, sesión persistente opcional y datos separados por cuenta en el navegador.
 - **Inicio:** muestra continuidad y accesos rápidos según el recorrido del usuario.
 - **Tratamientos:** catálogo por categorías y detalle de cada opción.
 - **Orientador de expectativas:** evolución de la idea “Calculadora Digital de Expectativas Reales”. Organiza resultados referenciales, recuperación, sesiones a confirmar y cuidados.
 - **Asesor personalizado:** usa el tratamiento, objetivo y etapa actual como contexto. Explica y orienta; no diagnostica, prescribe ni garantiza resultados.
-- **Seguimiento y alarmas:** permite crear recordatorios locales, marcarlos como completados y activar notificaciones del navegador.
+- **Seguimiento y alarmas:** permite crear recordatorios locales, marcarlos como completados y activar notificaciones del navegador; el progreso cambia según acciones reales.
+- **Fondos vivos:** motivos SVG grandes por sección descienden en loop, respetando el lenguaje visual del Figma y `prefers-reduced-motion`.
 - **Mi espacio:** perfil, historial, tratamientos guardados, alarmas activas y descarga del último resumen.
 - **Evaluación profesional:** prepara el siguiente paso y permite continuar con el equipo por WhatsApp.
 
@@ -78,3 +80,6 @@ La versión v3 incluye pruebas del orientador, reglas del asesor, fallback local
 - **PWA instalable** con manifest, service worker y caché básico/offline.
 
 > Nota: la agenda del prototipo guarda reservas en memoria del servidor. Para persistencia multiusuario real se requiere base de datos.
+
+## Nota sobre autenticación
+El registro/login de v3.3 es **funcional para el prototipo en un mismo navegador**. Las claves se derivan con PBKDF2 + SHA-256 y salt aleatorio; no se guarda la clave en texto plano. Para una versión de producción multi-dispositivo, sustituye esta capa por Firebase Auth, Supabase Auth, Auth0 u otro proveedor de identidad con recuperación verificada.

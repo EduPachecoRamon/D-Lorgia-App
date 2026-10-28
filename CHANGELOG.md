@@ -1,3 +1,17 @@
+# D’Lorgia Orienta v3.3 — lógica total y fondos vivos
+
+- Fondo ambiental rehecho con motivos SVG grandes repetidos que descienden en loop; Seguimiento usa relojes y Acceso usa sparkles según el lenguaje visual del Figma.
+- Motivos secundarios y elementos de pantalla también tienen movimiento suave, respetando `prefers-reduced-motion`.
+- Registro local funcional con nombre, correo, usuario y clave; validación de duplicados y fuerza de contraseña.
+- Contraseñas derivadas con PBKDF2/SHA-256 mediante Web Crypto y salt aleatorio; no se guarda la clave en texto plano.
+- Login real contra cuentas del dispositivo, sesión temporal o persistente (Recordarme), modo invitado y cierre de sesión.
+- Recuperación local de acceso para el prototipo, con advertencia de que producción requeriría correo/OTP.
+- Datos principales (perfil, orientación, historial, guardados, alarmas, preferencias y memoria del asesor) separados por cuenta.
+- Migración única de datos de v3.2.x a la primera cuenta creada/iniciada para no perder el recorrido existente.
+- Asesor animado durante consultas: typing dots, estado de carga, respuesta con entrada animada y halo/avatar activo.
+- Seguimiento ahora completa pasos según recordatorios y uso real del asesor.
+- Mi espacio muestra la identidad de la sesión actual.
+
 # Changelog
 
 ## 3.2.1 — PULIDO VISUAL FINAL
