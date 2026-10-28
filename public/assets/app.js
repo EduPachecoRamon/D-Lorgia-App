@@ -1,3 +1,4 @@
+const DLORGIA_BUILD = '3.3.1-layout-hotfix';
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
@@ -843,7 +844,7 @@ async function installPWA() {
 
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  try { await navigator.serviceWorker.register('/service-worker.js'); }
+  try { const reg = await navigator.serviceWorker.register('/service-worker.js?v=331', { updateViaCache: 'none' }); await reg.update(); }
   catch (error) { console.warn('Service worker no disponible', error); }
 }
 

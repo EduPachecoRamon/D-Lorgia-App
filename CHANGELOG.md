@@ -1,3 +1,11 @@
+# v3.3.1 — Hotfix de layout y caché
+
+- Evita mezcla de HTML nuevo con CSS/JS viejos.
+- Corrige SVG ambientales negros/sobre el contenido.
+- Corrige tabs de Ingresar/Crear cuenta y paneles simultáneos.
+- Refuerza scroll y stacking del acceso.
+- Mantiene toda la lógica v3.3.
+
 # D’Lorgia Orienta v3.3 — lógica total y fondos vivos
 
 - Fondo ambiental rehecho con motivos SVG grandes repetidos que descienden en loop; Seguimiento usa relojes y Acceso usa sparkles según el lenguaje visual del Figma.

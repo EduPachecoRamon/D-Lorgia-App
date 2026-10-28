@@ -10,7 +10,14 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/assets/icons/icon-192.png" />
   <title>D’Lorgia Orienta</title>
-  <link rel="stylesheet" href="/assets/styles.css" />
+  <style id="critical-v331">
+    /* Critical guard: evita mezclar HTML nuevo con estilos viejos durante una actualización. */
+    .ambient-layer{display:none}
+    .auth-form{display:none}
+    .auth-form.active{display:block}
+    .auth-success-layer{display:none}
+  </style>
+  <link rel="stylesheet" href="/assets/styles-v331.css" />
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true" focusable="false">
@@ -401,6 +408,6 @@
       <button data-nav="portal"><b><svg class="ui-icon"><use href="#i-user"/></svg></b><span>Mi espacio</span></button>
     </nav>
   </div>
-  <script type="module" src="/assets/app.js"></script>
+  <script type="module" src="/assets/app-v331.js"></script>
 </body>
 </html>

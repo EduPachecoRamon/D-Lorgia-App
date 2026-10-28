@@ -1,9 +1,9 @@
 {
   "name": "dlorgia-whatsapp-bot",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "private": true,
   "type": "module",
-  "description": "D'Lorgia Orienta v3.3: fondos animados por sección, registro/login local funcional, datos por cuenta y asesor con feedback animado.",
+  "description": "D'Lorgia Orienta v3.3.1: hotfix de layout, cache busting de assets y fondos animados detrás de la interfaz.",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",

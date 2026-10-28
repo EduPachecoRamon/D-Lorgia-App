@@ -160,3 +160,66 @@ main{position:relative;z-index:3}.topbar{z-index:35}.bottom-nav{z-index:45}
 @media(prefers-reduced-motion:reduce){.ambient-motif{display:none!important}.auth-success-layer i,.advisor-avatar::after,.assistant-status::after{display:none!important}}
 
 .auth-mode-switch.reset .auth-switch-glider{opacity:0}.screen.active::before{animation:legacyBgFloat 11s ease-in-out infinite}.screen.active::after{animation:legacyBgFloat 13s ease-in-out infinite reverse}@keyframes legacyBgFloat{50%{transform:translateY(14px) rotate(-4deg);opacity:.035}}.chat-form button{display:flex;align-items:center;justify-content:center;gap:7px}.chat-form button .ui-icon{width:15px;height:15px}
+
+
+/* v3.3.1 HOTFIX — layout/caché coherente */
+.app-shell{isolation:isolate}
+.app-shell > .ambient-layer{display:block;z-index:0}
+.app-shell > header,.app-shell > main,.app-shell > nav{position:relative}
+.app-shell > main{z-index:2}
+.app-shell > header{z-index:35}
+.app-shell > nav{z-index:45}
+.ambient-layer{z-index:0!important}
+.ambient-layer::before{z-index:0!important;pointer-events:none}
+.ambient-motif,.ambient-icon{z-index:0!important;pointer-events:none}
+
+/* El sistema SVG animado reemplaza los glifos decorativos antiguos de cada screen. */
+.screen::before,.screen::after{content:none!important;display:none!important}
+
+/* Fondo: presente pero nunca compite con títulos, botones o formularios. */
+.ambient-motif{opacity:.032}
+.ambient-motif.motif-secondary{opacity:.022}
+.ambient-icon{opacity:.045}
+.ambient-layer[data-scene="login"] .ambient-motif.motif-main{opacity:.036}
+.ambient-layer[data-scene="followup"] .ambient-motif.motif-main{opacity:.038}
+.ambient-layer[data-scene="assistant"] .ambient-motif.motif-main{opacity:.030}
+.ambient-layer[data-scene="assistant"] .motif-secondary{opacity:.027}
+
+/* Autenticación: un solo panel visible, switch consistente y scroll natural. */
+#login{overflow-x:hidden;overflow-y:auto}
+.login-wrap{justify-content:flex-start;padding-top:30px;padding-bottom:34px}
+.auth-card{overflow:hidden}
+.auth-mode-switch{display:grid!important;grid-template-columns:1fr 1fr;width:100%;min-height:44px;margin:0 0 16px}
+.auth-mode-switch button{appearance:none;-webkit-appearance:none;width:100%;min-height:36px;border:0!important;background:transparent!important;font:800 11px/1.1 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;box-shadow:none!important}
+.auth-mode-switch button.active{color:#fff!important}
+.auth-form{display:none!important}
+.auth-form.active{display:block!important}
+.auth-link{appearance:none;-webkit-appearance:none;border:0!important;background:transparent!important;border-radius:9px;text-decoration:none;box-shadow:none!important}
+.auth-link:hover{background:rgba(31,85,72,.055)!important}
+.auth-success-layer{display:grid}
+
+/* Inputs nunca se salen de la tarjeta, incluidos password + ojo. */
+.field-with-icon{width:100%;max-width:100%;overflow:hidden}
+.field-with-icon input{font-size:14px}
+.field-action{appearance:none;-webkit-appearance:none;flex:0 0 42px}
+.remember-row{min-width:0}
+.auth-row{min-width:0}
+
+/* Registro: al crecer, la pantalla se desplaza en vez de comprimir/solapar. */
+.auth-mode-switch.register ~ .auth-form.active{min-height:0}
+.login-card,.login-brand,.login-trust{position:relative;z-index:1}
+
+/* En desktop conserva la tarjeta tipo app, no la centra verticalmente a la fuerza. */
+@media(min-width:720px){
+  .login-wrap{padding-top:30px;padding-bottom:38px}
+}
+@media(max-width:420px){
+  .login-wrap{padding-left:16px;padding-right:16px}
+  .login-card{padding:15px}
+  .login-brand h1{font-size:38px}
+}
+
+/* Si el usuario pide menos movimiento, todo fondo vivo se apaga. */
+@media(prefers-reduced-motion:reduce){
+  .ambient-motif,.ambient-icon{display:none!important}
+}
