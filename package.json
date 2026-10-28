@@ -1,0 +1,17 @@
+{
+  "name": "dlorgia-whatsapp-bot",
+  "version": "3.2.0",
+  "private": true,
+  "type": "module",
+  "description": "D'Lorgia Orienta v3.2: asesor personalizado con memoria, agenda funcional, Mi Plan, PWA y seguimiento.",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "simulate": "node scripts/simulate.js",
+    "figma-link": "node scripts/figma-link.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1f5548" />
+  <meta name="description" content="D’Lorgia Orienta: prototipo académico de orientación, acompañamiento y continuidad del paciente." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/assets/icons/icon-192.png" />
+  <title>D’Lorgia Orienta</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div id="network-banner" class="network-banner hidden">Sin conexión · usando modo local</div>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-btn" data-nav="home" aria-label="Inicio">⌂</button>
+      <div class="brand-lockup">
+        <div class="brand-mark">DL</div>
+        <div><p class="eyebrow">D’LORGIA</p><strong>Orienta</strong></div>
+      </div>
+      <button class="ghost compact" data-nav="portal">Mi espacio</button>
+    </header>
+
+    <main>
+      <section class="screen" id="onboarding" data-icon="✦" data-icon2="◇">
+        <div class="onboarding-wrap">
+          <div class="onboarding-orbit">
+            <span class="orb orb-1">✦</span><span class="orb orb-2">♡</span><span class="orb orb-3">◷</span>
+            <div class="onboarding-core">DL</div>
+          </div>
+          <p class="eyebrow">PRIMERA VEZ</p>
+          <h1>Vamos a personalizar tu recorrido.</h1>
+          <p class="muted">Tu asesor usará estas preferencias para darte contexto útil sin diagnosticar ni reemplazar una evaluación profesional.</p>
+          <form id="onboarding-form" class="panel form-grid onboarding-form">
+            <label>¿Cómo quieres que te llamemos?<input id="onboard-name" maxlength="60" placeholder="Nombre o alias" /></label>
+            <label>Sede preferida<select id="onboard-branch"><option value="huancayo">Huancayo</option><option value="piura">Piura</option><option value="pucallpa">Pucallpa</option></select></label>
+            <label>¿Qué te interesa más?<select id="onboard-interest"><option value="piel">Piel</option><option value="corporal">Corporal</option><option value="capilar">Capilar</option><option value="depilacion">Depilación</option><option value="tatuajes">Tatuajes</option><option value="explorar">Quiero explorar</option></select></label>
+            <label>¿Qué valoras más?<select id="onboard-priority"><option value="resultados">Entender resultados</option><option value="recuperacion">Recuperación corta</option><option value="cuidados">Cuidados claros</option><option value="acompanamiento">Acompañamiento</option></select></label>
+            <button class="primary full" type="submit">Crear mi recorrido →</button>
+            <button class="ghost full" id="skip-onboarding" type="button">Continuar sin personalizar</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen active" id="home" data-icon="✦" data-icon2="♡">
+        <div class="hero">
+          <div class="hero-copy">
+            <span class="status-pill">Orientación + acompañamiento</span>
+            <p id="home-personal-greeting" class="personal-greeting hidden"></p>
+            <p class="eyebrow">BIENESTAR Y TRANSFORMACIÓN</p>
+            <h1>Entiende tu proceso.<br><span>Decide con calma.</span></h1>
+            <p>D’Lorgia Orienta organiza tratamientos, expectativas, cuidados, seguimiento y evaluación profesional en un recorrido simple y personalizado.</p>
+            <div class="hero-actions">
+              <button class="primary full" data-nav="catalog">Explorar tratamientos →</button>
+              <button class="secondary full" data-nav="assistant">Hablar con mi asesor</button>
+            </div>
+          </div>
+          <div class="hero-visual visual-home">
+            <div class="visual-orbit orbit-a">✦</div>
+            <div class="visual-orbit orbit-b">◌</div>
+            <div class="visual-orbit orbit-c">♡</div>
+            <div class="visual-center"><span>DL</span><small>ORIENTA</small></div>
+          </div>
+        </div>
+
+        <div id="home-continuity" class="continuity-card hidden"></div>
+        <div id="home-plan" class="plan-card hidden"></div>
+
+        <div class="section-minihead">
+          <div><p class="eyebrow">TU RECORRIDO</p><h2>¿Qué necesitas hoy?</h2></div>
+        </div>
+        <div class="quick-grid">
+          <button class="quick-card quick-advisor" data-nav="assistant">
+            <span class="quick-icon">✦</span><b>Asesor personalizado</b><span>Te guía según tu tratamiento, objetivo y etapa actual.</span>
+          </button>
+          <button class="quick-card quick-calc" data-nav="calculator">
+            <span class="quick-icon">◎</span><b>Orientador de expectativas</b><span>Resultados, recuperación y cuidados de forma referencial.</span>
+          </button>
+          <button class="quick-card quick-follow" data-nav="followup">
+            <span class="quick-icon">◷</span><b>Seguimiento y alarmas</b><span>Organiza recordatorios y próximos pasos del proceso.</span>
+          </button>
+          <button class="quick-card quick-space" data-nav="portal">
+            <span class="quick-icon">◇</span><b>Mi espacio</b><span>Perfil, historial, guardados, recordatorios y documentos.</span>
+          </button>
+        </div>
+
+        <div class="trust-strip">
+          <span>✓ Orientación clara</span><span>✓ Sin diagnósticos automáticos</span><span>✓ Derivación profesional</span>
+        </div>
+      </section>
+
+      <section class="screen" id="catalog" data-icon="◌" data-icon2="✧">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">TRATAMIENTOS</p><h2>Explora tus opciones</h2></div>
+          <span class="section-icon">◌</span>
+        </div>
+        <p class="muted">Elige una categoría para comprender el tratamiento antes de pasar a una orientación personalizada.</p>
+        <div class="chips filter-chips" id="category-filters"></div>
+        <div id="catalog-list" class="catalog-list"></div>
+      </section>
+
+      <section class="screen" id="detail" data-icon="✧" data-icon2="◇">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">DETALLE DEL TRATAMIENTO</p><h2 id="detail-name">Tratamiento</h2></div>
+          <span class="section-icon">✧</span>
+        </div>
+        <div id="detail-content"></div>
+      </section>
+
+      <section class="screen" id="calculator" data-icon="◎" data-icon2="✦">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">EXPECTATIVAS REALES</p><h2>Orientador de expectativas</h2></div>
+          <span class="section-icon">◎</span>
+        </div>
+        <div class="info-banner">
+          <span class="info-banner-icon">i</span>
+          <p><b>Calculadora Digital de Expectativas Reales.</b> Organiza información referencial según tus selecciones. No predice resultados clínicos ni sustituye una evaluación profesional.</p>
+        </div>
+        <div class="stepper"><span class="active">1 Tratamiento</span><span>2 Objetivo</span><span>3 Orientación</span><span>4 Siguiente paso</span></div>
+        <form id="orientation-form" class="panel form-grid">
+          <label>Tratamiento<select id="treatment-select" required></select></label>
+          <label>¿Qué quieres comprender mejor?<select id="goal-select"></select></label>
+          <label>Sensibilidad / tolerancia<select id="sensitivity-select"><option value="no_indicado">No indicado</option><option value="normal">Sin sensibilidad especial conocida</option><option value="sensible">Piel o zona sensible</option></select></label>
+          <label>Preferencia de recuperación<select id="availability-select"><option value="flexible">Flexible</option><option value="rapida">Quiero conocer opciones compatibles con recuperación corta</option></select></label>
+          <button class="primary" type="submit">Generar mi orientación →</button>
+        </form>
+        <div id="orientation-result" class="hidden"></div>
+      </section>
+
+      <section class="screen" id="assistant" data-icon="✦" data-icon2="◌">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">ASESOR PERSONALIZADO</p><h2>Tu guía D’Lorgia</h2></div>
+          <span class="section-icon">✦</span>
+        </div>
+
+        <div class="advisor-identity">
+          <div class="advisor-avatar"><span>✦</span></div>
+          <div><b>D’Lorgia Orienta</b><p id="advisor-greeting">Te ayudo a entender tu proceso y decidir tu siguiente paso.</p></div>
+        </div>
+
+        <div id="advisor-context" class="context-card"></div>
+
+        <div class="advisor-scope">
+          <span class="scope-good">Puedo: explicar, orientar, resumir y ayudarte a organizarte.</span>
+          <span class="scope-stop">No hago: diagnósticos, recetas ni promesas de resultados.</span>
+        </div>
+
+        <div class="chat-panel">
+          <div id="assistant-status" class="assistant-status">Comprobando asesor…</div>
+          <div class="bubble bot"><b>Asesor D’Lorgia</b><br>¿Qué necesitas entender hoy? Puedo usar el tratamiento que estás revisando como contexto.</div>
+          <div id="chat-log"></div>
+          <div class="advisor-topics" id="advisor-topics">
+            <button data-focus="expectativas" data-prompt="¿Qué puedo esperar de este tratamiento?">✦ Qué esperar</button>
+            <button data-focus="recuperacion" data-prompt="¿Cómo suele ser la recuperación de este tratamiento?">◷ Recuperación</button>
+            <button data-focus="cuidados" data-prompt="¿Qué cuidados generales debo conocer?">♡ Cuidados</button>
+            <button data-focus="evaluacion" data-prompt="¿Qué debería preguntar en mi evaluación profesional?">◇ Preparar evaluación</button>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" placeholder="Escribe tu duda…" autocomplete="off" maxlength="500" />
+            <button class="primary" type="submit">Enviar</button>
+          </form>
+          <div id="last-answer-meta" class="answer-meta hidden"></div>
+          <div class="action-row">
+            <button class="secondary" data-nav="evaluation">Solicitar evaluación</button>
+            <button class="secondary" data-nav="followup">Crear recordatorio</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="summary" data-icon="▤" data-icon2="✓">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">TU ORIENTACIÓN</p><h2>Resumen personal</h2></div>
+          <span class="section-icon">▤</span>
+        </div>
+        <div id="summary-content" class="panel"></div>
+        <div class="action-stack">
+          <button class="primary" data-nav="assistant">Preguntar a mi asesor →</button>
+          <button class="secondary" data-nav="evaluation">Solicitar evaluación</button>
+          <button class="secondary" data-nav="followup">Crear recordatorio</button>
+          <button class="secondary" id="download-summary">Descargar resumen</button>
+        </div>
+      </section>
+
+      <section class="screen" id="evaluation" data-icon="◇" data-icon2="✓">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">SIGUIENTE PASO</p><h2>Evaluación profesional</h2></div>
+          <span class="section-icon">◇</span>
+        </div>
+        <div class="info-banner professional"><span class="info-banner-icon">✓</span><p>La orientación digital termina donde comienza la decisión profesional. El equipo confirma disponibilidad, procedimiento y recomendaciones individuales.</p></div>
+        <form id="evaluation-form" class="panel form-grid">
+          <label>Nombre<input id="eval-name" required placeholder="¿Cómo te llamas?" /></label>
+          <label>Correo o contacto<input id="eval-contact" required placeholder="Tu contacto" /></label>
+          <label>Sede<select id="eval-branch"><option value="huancayo">Huancayo</option><option value="piura">Piura</option><option value="pucallpa">Pucallpa</option></select></label>
+          <label>Interés<input id="eval-interest" placeholder="Ej. Limpieza facial" /></label>
+          <label>Fecha preferida<input id="eval-date" type="date" /></label>
+          <div class="schedule-box">
+            <div class="schedule-head"><span><small>Agenda de la sede</small><b id="schedule-title">Selecciona una fecha</b></span><span class="live-dot">●</span></div>
+            <div id="schedule-slots" class="schedule-slots"><p class="muted">Elige sede y fecha para consultar horarios disponibles.</p></div>
+            <input id="eval-time" type="hidden" />
+          </div>
+          <button class="primary" type="submit">Reservar horario y preparar solicitud</button>
+        </form>
+        <div id="evaluation-result" class="hidden"></div>
+      </section>
+
+      <section class="screen" id="followup" data-icon="◷" data-icon2="✓">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">SEGUIMIENTO</p><h2>Tu proceso, paso a paso</h2></div>
+          <span class="section-icon">◷</span>
+        </div>
+        <p class="muted">Convierte tu orientación en acciones concretas. Los recordatorios de este prototipo se guardan en este dispositivo.</p>
+        <div id="followup-content"></div>
+
+        <div class="panel reminder-builder">
+          <div class="panel-title"><span class="panel-icon">◷</span><div><p class="eyebrow">NUEVA ALARMA</p><h3>Crear recordatorio</h3></div></div>
+          <div class="form-grid compact-grid">
+            <label>Tipo<select id="reminder-type"><option value="evaluacion">Evaluación</option><option value="cuidado">Revisar cuidados</option><option value="seguimiento">Seguimiento</option><option value="personalizado">Personalizado</option></select></label>
+            <label>Recordatorio<input id="reminder-title" placeholder="Ej. Revisar cuidados posteriores" maxlength="80" /></label>
+            <label>Fecha<input id="reminder-date" type="date" /></label>
+            <label>Hora<input id="reminder-time" type="time" /></label>
+            <button class="primary" id="add-reminder" type="button">Guardar alarma</button>
+          </div>
+          <p class="microcopy">Si autorizas notificaciones, la app puede avisarte mientras esté abierta. Para producción se usarían notificaciones push del sistema.</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title"><span class="panel-icon">✓</span><div><p class="eyebrow">MIS ALARMAS</p><h3>Recordatorios guardados</h3></div></div>
+          <div id="reminders-list" class="reminders-list"></div>
+          <button class="secondary full" id="enable-notifications" type="button">Activar notificaciones del navegador</button>
+        </div>
+      </section>
+
+      <section class="screen" id="portal" data-icon="◇" data-icon2="▤">
+        <div class="section-heading">
+          <button class="back" data-back aria-label="Volver">←</button>
+          <div><p class="eyebrow">MI ESPACIO</p><h2>Todo tu recorrido</h2></div>
+          <span class="section-icon">◇</span>
+        </div>
+        <div class="notice">Prototipo académico: perfil, historial, guardados y alarmas se almacenan localmente en este navegador. No ingreses información clínica sensible.</div>
+
+        <div class="stats-grid" id="portal-stats"></div>
+
+        <form id="profile-form" class="panel form-grid">
+          <div class="panel-title"><span class="panel-icon">○</span><div><p class="eyebrow">PERFIL</p><h3>Personaliza tu experiencia</h3></div></div>
+          <label>Nombre o alias<input id="profile-name" placeholder="Tu nombre" maxlength="60" /></label>
+          <label>Sede preferida<select id="profile-branch"><option value="huancayo">Huancayo</option><option value="piura">Piura</option><option value="pucallpa">Pucallpa</option></select></label>
+          <button class="primary" type="submit">Guardar perfil</button>
+        </form>
+
+        <div class="panel"><div class="panel-title"><span class="panel-icon">♡</span><div><p class="eyebrow">GUARDADOS</p><h3>Tratamientos para revisar</h3></div></div><div id="saved-list" class="saved-list"></div></div>
+        <div class="panel"><div class="panel-title"><span class="panel-icon">▤</span><div><p class="eyebrow">HISTORIAL</p><h3>Orientaciones recientes</h3></div></div><div id="history-list" class="history-list"></div></div>
+        <div class="panel"><div class="panel-title"><span class="panel-icon">◷</span><div><p class="eyebrow">PRÓXIMOS PASOS</p><h3>Alarmas activas</h3></div></div><div id="portal-reminders"></div><button class="secondary full" data-nav="followup">Gestionar recordatorios</button></div>
+        <div class="panel"><div class="panel-title"><span class="panel-icon">⇩</span><div><p class="eyebrow">DOCUMENTOS</p><h3>Resumen de orientación</h3></div></div><p class="muted">Descarga el último resumen como referencia personal del prototipo.</p><button class="secondary full" id="portal-download">Descargar último resumen</button></div>
+        <div class="panel install-panel"><div class="panel-title"><span class="panel-icon">⌂</span><div><p class="eyebrow">APP INSTALABLE</p><h3>Lleva D’Lorgia contigo</h3></div></div><p class="muted">Instala este prototipo como app web en tu dispositivo y conserva acceso básico aun con conexión inestable.</p><button class="secondary full" id="install-app" type="button">Instalar D’Lorgia Orienta</button><small id="install-status" class="microcopy"></small></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegación principal">
+      <button data-nav="home"><b>⌂</b><span>Inicio</span></button>
+      <button data-nav="catalog"><b>◌</b><span>Tratamientos</span></button>
+      <button data-nav="assistant" class="nav-advisor"><b>✦</b><span>Asesor</span></button>
+      <button data-nav="followup"><b>◷</b><span>Seguimiento</span></button>
+      <button data-nav="portal"><b>◇</b><span>Mi espacio</span></button>
+    </nav>
+  </div>
+  <script type="module" src="/assets/app.js"></script>
+</body>
+</html>
