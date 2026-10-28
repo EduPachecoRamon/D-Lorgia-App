@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.2.1 — PULIDO VISUAL FINAL
+- Añade pantalla de ingreso demostrativa antes del onboarding/home, sin almacenar la clave.
+- Conserva todas las funciones de v3.2 y añade cierre de sesión sin borrar datos locales.
+- Sustituye iconografía principal de caracteres Unicode por un sistema SVG outline autocontenido y coherente.
+- Añade fondo ambiental de íconos con caída vertical infinita, velocidades, tamaños y deriva variables.
+- El fondo cambia su conjunto de iconos según la pantalla activa.
+- Añade microinteracciones en navegación, tarjetas, botones e iconos.
+- Añade gradiente respirante al hero y al onboarding, respetando verde/crema/dorado.
+- Inicio comunica el estado real del recorrido: personalización, orientación o evaluación programada.
+- Mantiene `prefers-reduced-motion` y desactiva el fondo animado cuando el sistema solicita menos movimiento.
+- Actualiza la caché PWA para evitar servir CSS/JS anteriores.
+
 ## 3.2.0 — SUPER
 - Consolida toda la v3.1 merged: onboarding, memoria del asesor, agenda, reservas, recordatorio automático y animaciones.
 - Añade Mi Plan dinámico y progreso visual.

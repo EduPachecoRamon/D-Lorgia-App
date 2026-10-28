@@ -57,6 +57,43 @@ function rememberAdvisor(role, text) {
 function getPreferences() { return store.get('dlorgia:preferences:v1', {}); }
 function savePreferences(value) { store.set('dlorgia:preferences:v1', value); }
 
+
+function icon(name, className = 'ui-icon') {
+  return `<svg class="${className}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+}
+
+const ambientScenes = {
+  login: ['sparkles','heart','lock','leaf','user','mail'],
+  onboarding: ['sparkles','heart','user','calendar','leaf','target'],
+  home: ['sparkles','heart-pulse','calendar','message','leaf','user'],
+  catalog: ['scan','sparkles','target','heart','leaf','bookmark'],
+  detail: ['sparkles','scan','target','heart','stethoscope','bookmark'],
+  calculator: ['target','sparkles','clock','heart','check','scan'],
+  assistant: ['sparkles','message','heart','user','stethoscope','leaf'],
+  summary: ['file','check','bookmark','sparkles','heart','calendar'],
+  evaluation: ['stethoscope','calendar','check','clock','heart','user'],
+  followup: ['bell','clock','calendar','check','heart-pulse','bookmark'],
+  portal: ['user','bookmark','file','bell','calendar','heart']
+};
+
+function setAmbientScene(scene) {
+  const layer = $('#ambient-layer');
+  if (!layer) return;
+  layer.dataset.scene = scene;
+  const names = ambientScenes[scene] || ambientScenes.home;
+  $$('.ambient-icon use').forEach((use, index) => use.setAttribute('href', `#i-${names[index % names.length]}`));
+}
+
+function hasEntryAccess() {
+  return store.get('dlorgia:entryComplete', false) || sessionStorage.getItem('dlorgia:sessionEntry') === '1';
+}
+
+function enterExperience() {
+  const next = store.get('dlorgia:onboardingComplete', false) ? 'home' : 'onboarding';
+  navStack = [next];
+  show(next, false);
+}
+
 function setNavActive(id) {
   $$('.bottom-nav [data-nav]').forEach((btn) => btn.classList.toggle('active', btn.dataset.nav === id));
 }
@@ -66,6 +103,8 @@ function show(id, push = true) {
   $$('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
   if (push && navStack.at(-1) !== id) navStack.push(id);
   setNavActive(id);
+  $('.app-shell')?.classList.toggle('entry-mode', id === 'login');
+  setAmbientScene(id);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (id === 'home') renderHome();
@@ -99,7 +138,8 @@ function rememberOrientation(result) {
 }
 
 function categoryIcon(category) {
-  return ({ Piel: '◌', Corporal: '◇', Capilar: '✦', Depilación: '⌁', Tatuajes: '◎' })[category] || '✧';
+  const name = ({ Piel: 'sparkles', Corporal: 'heart-pulse', Capilar: 'leaf', Depilación: 'scan', Tatuajes: 'target' })[category] || 'sparkles';
+  return icon(name);
 }
 
 function renderHome() {
@@ -110,6 +150,14 @@ function renderHome() {
   if (greeting) {
     greeting.textContent = profile.name ? `Hola, ${profile.name}. Tu recorrido sigue aquí.` : '';
     greeting.classList.toggle('hidden', !profile.name);
+  }
+  const statePill = $('#home-status-pill span');
+  const evaluation = store.get('dlorgia:lastEvaluation');
+  if (statePill) {
+    if (evaluation?.date) statePill.textContent = `Evaluación programada · ${formatShortDate(evaluation.date, evaluation.time || '')}`;
+    else if (currentOrientation?.treatment?.name) statePill.textContent = `Continúa · ${currentOrientation.treatment.name}`;
+    else if (store.get('dlorgia:onboardingComplete', false)) statePill.textContent = 'Tu recorrido ya está personalizado';
+    else statePill.textContent = 'Orientación + acompañamiento';
   }
   renderPlan();
   if (!currentOrientation) {
@@ -143,7 +191,7 @@ function renderCatalog() {
     <button class="treatment-card" data-treatment="${escapeHtml(x.id)}">
       <span class="avatar">${categoryIcon(x.category)}</span>
       <span><b>${escapeHtml(x.name)}</b><small>${escapeHtml(x.short)}</small></span>
-      <span>→</span>
+      <span class="card-arrow">${icon('chevron-right')}</span>
     </button>`).join('') : '<div class="empty">No hay tratamientos en esta categoría.</div>';
   $$('[data-treatment]').forEach((btn) => btn.onclick = () => openDetail(btn.dataset.treatment));
 }
@@ -167,11 +215,11 @@ function openDetail(id, push = true) {
       <h3>${escapeHtml(treatment.name)}</h3>
       <p>${escapeHtml(treatment.description)}</p>
     </div>
-    <div class="panel"><div class="panel-title"><span class="panel-icon">◎</span><div><p class="eyebrow">OBJETIVO</p><h3>¿Qué busca orientar?</h3></div></div><p class="muted">${escapeHtml(treatment.objective || treatment.short)}</p></div>
+    <div class="panel"><div class="panel-title"><span class="panel-icon">${icon('target')}</span><div><p class="eyebrow">OBJETIVO</p><h3>¿Qué busca orientar?</h3></div></div><p class="muted">${escapeHtml(treatment.objective || treatment.short)}</p></div>
     <div class="action-stack">
       <button class="primary" id="detail-calc">Orientar mis expectativas →</button>
       <button class="secondary" id="detail-assistant">Consultar a mi asesor</button>
-      <button class="secondary" id="detail-save">${isSaved ? '✓ Guardado en Mi espacio' : '♡ Guardar para revisar'}</button>
+      <button class="secondary detail-save ${isSaved ? 'is-saved' : ''}" id="detail-save">${icon(isSaved ? 'circle-check' : 'heart')} ${isSaved ? 'Guardado en Mi espacio' : 'Guardar para revisar'}</button>
     </div>`;
   if ($('#treatment-select')) $('#treatment-select').value = id;
   $('#detail-calc').onclick = () => show('calculator');
@@ -341,7 +389,7 @@ async function sendQuestion(text) {
 }
 
 function reminderIcon(type) {
-  return ({ evaluacion:'◇', cuidado:'♡', seguimiento:'◷', personalizado:'✦' })[type] || '◷';
+  return icon(({ evaluacion:'stethoscope', cuidado:'heart', seguimiento:'bell', personalizado:'sparkles' })[type] || 'clock');
 }
 
 function reminderTimestamp(item) {
@@ -543,8 +591,8 @@ function renderPlan() {
   box.classList.remove('hidden');
   box.innerHTML = `<div class="plan-head"><span><small>MI PLAN</small><b>${done}/${steps.length} pasos completados</b></span><strong>${pct}%</strong></div>
     <div class="plan-progress"><span style="width:${pct}%"></span></div>
-    <div class="plan-steps">${steps.map((x) => `<span class="${x.done ? 'done' : ''}">${x.done ? '✓' : '○'} ${escapeHtml(x.label)}</span>`).join('')}</div>
-    ${next ? `<button class="secondary full" id="plan-next">Siguiente: ${escapeHtml(next.label)} →</button>` : '<div class="plan-complete">✓ Tu recorrido base está organizado. Puedes seguir usando el asesor cuando lo necesites.</div>'}`;
+    <div class="plan-steps">${steps.map((x) => `<span class="${x.done ? 'done' : ''}">${x.done ? icon('check','ui-icon mini') : '<span class="plan-dot"></span>'} ${escapeHtml(x.label)}</span>`).join('')}</div>
+    ${next ? `<button class="secondary full" id="plan-next">Siguiente: ${escapeHtml(next.label)} →</button>` : `<div class="plan-complete">${icon('circle-check','ui-icon mini')} Tu recorrido base está organizado. Puedes seguir usando el asesor cuando lo necesites.</div>`}`;
   if (next && $('#plan-next')) $('#plan-next').onclick = () => show(next.nav);
 }
 
@@ -627,15 +675,65 @@ async function init() {
   updateNetworkState();
   registerServiceWorker();
 
-  if (!store.get('dlorgia:onboardingComplete', false)) {
-    show('onboarding');
+  const rememberedUser = store.get('dlorgia:loginUser', '');
+  if ($('#login-user') && rememberedUser) $('#login-user').value = rememberedUser;
+
+  if (!hasEntryAccess()) {
+    navStack = ['login'];
+    show('login', false);
+  } else if (!store.get('dlorgia:onboardingComplete', false)) {
+    navStack = ['onboarding'];
+    show('onboarding', false);
   } else {
-    setNavActive('home');
+    navStack = ['home'];
+    show('home', false);
   }
 }
 
 $$('[data-nav]').forEach((btn) => btn.addEventListener('click', () => show(btn.dataset.nav)));
 $$('[data-back]').forEach((btn) => btn.addEventListener('click', goBack));
+
+$('#login-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const user = $('#login-user').value.trim();
+  const password = $('#login-password').value;
+  if (!user || !password) return;
+  if ($('#login-remember').checked) {
+    store.set('dlorgia:entryComplete', true);
+    store.set('dlorgia:loginUser', user);
+  } else {
+    sessionStorage.setItem('dlorgia:sessionEntry', '1');
+  }
+  $('#login-password').value = '';
+  enterExperience();
+});
+
+$('#guest-entry')?.addEventListener('click', () => {
+  sessionStorage.setItem('dlorgia:sessionEntry', '1');
+  enterExperience();
+});
+
+$('#toggle-password')?.addEventListener('click', () => {
+  const input = $('#login-password');
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+$('#logout-app')?.addEventListener('click', () => {
+  localStorage.removeItem('dlorgia:entryComplete');
+  sessionStorage.removeItem('dlorgia:sessionEntry');
+  navStack = ['login'];
+  show('login', false);
+});
+
+// Microinteracción breve: confirma el toque sin alterar la navegación.
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button || !button.querySelector('.ui-icon')) return;
+  button.classList.remove('icon-pop');
+  void button.offsetWidth;
+  button.classList.add('icon-pop');
+});
 
 $('#orientation-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();

@@ -64,3 +64,60 @@ button,input,select{font:inherit}.topbar{position:sticky;top:0;z-index:30;displa
 .network-banner{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:90;width:min(100%,440px);background:#7d5d24;color:#fff;text-align:center;padding:7px 12px;font-size:11px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.13);animation:screenIn .2s ease}.network-banner:not(.hidden)+.app-shell{padding-top:28px}
 .install-panel{background:linear-gradient(145deg,#f6f1e6,#edf3ee)}
 @media(max-width:360px){.plan-steps{grid-template-columns:1fr}}
+
+
+/* v3.2.1 — pulido visual final: ingreso, SVG, fondo ambiental y microinteracciones */
+.svg-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.ui-icon{width:1.08em;height:1.08em;display:inline-block;vertical-align:-.16em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.ui-icon.mini{width:.95em;height:.95em;vertical-align:-.12em}
+main{position:relative;z-index:3}.topbar{z-index:35}.bottom-nav{z-index:45}
+.app-shell.entry-mode{padding-bottom:0}
+.app-shell.entry-mode .topbar,.app-shell.entry-mode .bottom-nav{display:none}
+.app-shell.entry-mode main{min-height:100vh}
+
+/* Fondo ambiental: SVGs fijos, animados solo con transform para mantener fluidez. */
+.ambient-layer{position:fixed;z-index:1;top:0;left:50%;transform:translateX(-50%);width:min(100%,440px);height:100vh;overflow:hidden;pointer-events:none;opacity:.92;contain:strict}
+.ambient-layer::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(246,241,230,.15),transparent 24%,transparent 76%,rgba(246,241,230,.24));z-index:2}
+.ambient-icon{position:absolute;left:var(--x);top:-12vh;width:var(--size);height:var(--size);color:var(--green);opacity:.07;animation:iconRain var(--duration) linear infinite;animation-delay:var(--delay);will-change:transform}
+.ambient-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.ambient-icon.ambient-gold{color:var(--gold);opacity:.065}
+.ambient-layer[data-scene="assistant"] .ambient-icon,.ambient-layer[data-scene="evaluation"] .ambient-icon{opacity:.075}
+.ambient-layer[data-scene="login"] .ambient-icon{opacity:.09}
+@keyframes iconRain{0%{transform:translate3d(0,-16vh,0) rotate(-8deg)}50%{transform:translate3d(var(--drift),56vh,0) rotate(8deg)}100%{transform:translate3d(0,118vh,0) rotate(18deg)}}
+
+/* Pantalla de ingreso, construida con los mismos tokens verde/crema/dorado del prototipo. */
+#login{padding:0;min-height:100vh;background:linear-gradient(155deg,#f7f2e8 0%,#eef3ed 58%,#f5eedf 100%);overflow:hidden}
+.login-wrap{min-height:100vh;padding:46px 22px 28px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:3}
+.login-wrap::before{content:"";position:absolute;width:250px;height:250px;border-radius:50%;right:-130px;top:40px;background:radial-gradient(circle,rgba(47,106,91,.12),transparent 68%);z-index:-1}
+.login-brand{text-align:center;margin-bottom:22px}.login-emblem{width:94px;height:94px;margin:0 auto 18px;border-radius:50%;display:grid;place-content:center;background:linear-gradient(145deg,var(--green3),var(--green2));border:1px solid rgba(213,179,109,.55);box-shadow:0 18px 42px rgba(31,85,72,.19),inset 0 0 0 8px rgba(255,255,255,.035);animation:loginEmblem 5.4s ease-in-out infinite}
+.login-emblem span{font:29px Georgia,serif;color:#f1d293}.login-emblem small{font-size:7px;letter-spacing:.24em;color:#fff;margin-top:2px}
+.login-brand h1{font:500 42px/.98 Georgia,serif;margin:10px 0 12px}.login-brand h1 span{color:var(--green)}.login-brand>.muted{max-width:330px;margin:0 auto;line-height:1.5;font-size:13px}
+.login-card{background:rgba(255,253,248,.88);border:1px solid rgba(217,223,216,.96);border-radius:22px;padding:17px;box-shadow:0 20px 48px rgba(25,53,47,.10);backdrop-filter:blur(12px)}
+.login-card-head{display:flex;align-items:center;gap:11px;margin-bottom:15px}.login-card-head .icon-tile{width:39px;height:39px;border-radius:13px;background:var(--sage);color:var(--green);display:grid;place-items:center}.login-card-head small{display:block;color:var(--gold);font-size:9px;font-weight:900;letter-spacing:.14em}.login-card-head b{display:block;font-family:Georgia,serif;font-size:19px;margin-top:2px}
+.field-with-icon{height:50px;border:1px solid var(--line);border-radius:13px;background:#fff;display:grid;grid-template-columns:38px 1fr auto;align-items:center;margin:9px 0;transition:border-color .2s,box-shadow .2s,transform .2s}.field-with-icon:focus-within{border-color:#a9c5b7;box-shadow:0 0 0 3px rgba(141,189,176,.13);transform:translateY(-1px)}.field-with-icon>span{display:grid;place-items:center;color:var(--green)}.field-with-icon input{border:0;outline:0;background:transparent;width:100%;min-width:0;padding:0 6px;color:var(--ink)}.field-with-icon input::placeholder{color:#9aa49f}.field-action{width:42px;height:42px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.remember-row{display:flex;align-items:center;gap:8px;margin:11px 1px 14px;color:var(--muted);font-size:10px}.remember-row input{accent-color:var(--green)}
+.login-submit{display:flex;align-items:center;justify-content:center;gap:8px}.guest-entry{margin-top:6px;font-weight:750}.login-note{display:flex;gap:7px;align-items:flex-start;color:var(--muted);font-size:9px;line-height:1.45;margin:10px 3px 0}.login-note .ui-icon{color:var(--gold);margin-top:1px}
+.login-trust{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px}.login-trust span{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--muted);padding:6px 8px;border:1px solid rgba(217,223,216,.8);background:rgba(255,255,255,.48);border-radius:999px}.login-trust .ui-icon{color:var(--green)}
+@keyframes loginEmblem{0%,100%{transform:translateY(0);box-shadow:0 18px 42px rgba(31,85,72,.18),0 0 0 0 rgba(213,179,109,.05)}50%{transform:translateY(-5px);box-shadow:0 22px 48px rgba(31,85,72,.22),0 0 0 10px rgba(213,179,109,.03)}}
+
+/* Iconografía y microinteracciones */
+.icon-btn{display:grid;place-items:center}.icon-btn .ui-icon{width:21px;height:21px}.back{width:38px;height:38px;border-radius:12px;display:grid;place-items:center}.back:hover{background:rgba(31,85,72,.06)}.back .ui-icon{width:22px;height:22px}
+.section-icon,.panel-icon,.quick-icon,.continuity-icon,.reminder-icon,.advisor-avatar{display:grid;place-items:center}.section-icon .ui-icon{width:22px;height:22px}.panel-icon .ui-icon,.quick-icon .ui-icon,.reminder-icon .ui-icon{width:19px;height:19px}.continuity-icon .ui-icon{width:20px;height:20px}.advisor-avatar .ui-icon{width:24px;height:24px}
+.status-pill{align-items:center;gap:6px}.status-pill .ui-icon{width:13px;height:13px}.visual-orbit .ui-icon{width:19px;height:19px}
+.advisor-topics button{display:flex;align-items:center;gap:6px}.advisor-topics button .ui-icon{width:14px;height:14px;color:var(--green)}
+.bottom-nav button b .ui-icon{width:18px;height:18px;transition:transform .2s ease}.bottom-nav .nav-advisor b .ui-icon{width:17px;height:17px}.bottom-nav button.active b .ui-icon{transform:translateY(-2px) scale(1.08)}
+.card-arrow{color:var(--green);display:grid;place-items:center}.card-arrow .ui-icon{width:18px;height:18px}.detail-save{display:flex;align-items:center;justify-content:center;gap:7px}.detail-save .ui-icon{width:17px;height:17px}.detail-save.is-saved .ui-icon{color:var(--gold)}
+.quick-card:hover .quick-icon .ui-icon{transform:scale(1.12) rotate(5deg)}.quick-icon .ui-icon,.panel-icon .ui-icon,.section-icon .ui-icon,.advisor-avatar .ui-icon{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.icon-pop .ui-icon{animation:iconPop .38s cubic-bezier(.2,.8,.2,1)}@keyframes iconPop{0%{transform:scale(1)}45%{transform:scale(1.22) rotate(6deg)}100%{transform:scale(1)}}
+.nav-advisor.icon-pop b{animation:advisorTap .42s ease}@keyframes advisorTap{50%{box-shadow:0 0 0 7px rgba(31,85,72,.08),0 6px 14px rgba(31,85,72,.2)}}
+
+/* Hero: el gradiente conserva la composición Figma, pero respira lentamente. */
+.hero-visual{background:linear-gradient(125deg,var(--green3),var(--green2),#356f61,var(--green3));background-size:260% 260%;animation:heroGradient 16s ease-in-out infinite}.hero-visual::before{animation:heroRing 8s ease-in-out infinite}
+@keyframes heroGradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}@keyframes heroRing{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.035);opacity:.58}}
+.onboarding-orbit{background:linear-gradient(125deg,var(--green3),var(--green2),#356f61,var(--green3));background-size:250% 250%;animation:heroGradient 17s ease-in-out infinite}
+
+.plan-steps span{display:flex;align-items:center;gap:5px}.plan-dot{width:8px;height:8px;border-radius:50%;border:1px solid rgba(255,255,255,.48);display:inline-block;flex:0 0 auto}.plan-complete{display:flex;gap:6px;align-items:flex-start}.session-panel{background:linear-gradient(145deg,#fffaf0,#f4f0e6)}
+
+@media(min-width:720px){.ambient-layer{top:24px;height:calc(100vh - 48px);border-radius:26px}.app-shell.entry-mode main{min-height:calc(100vh - 48px)}#login,.login-wrap{min-height:calc(100vh - 48px)}}
+@media(max-width:360px){.login-wrap{padding:32px 17px 22px}.login-brand h1{font-size:36px}.login-emblem{width:84px;height:84px}.login-card{padding:14px}}
+@media(prefers-reduced-motion:reduce){.ambient-icon{display:none!important}.hero-visual,.onboarding-orbit,.login-emblem{animation:none!important}}

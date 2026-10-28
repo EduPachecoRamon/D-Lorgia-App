@@ -1,4 +1,4 @@
-const CACHE = 'dlorgia-orienta-v32';
+const CACHE = 'dlorgia-orienta-v321-polish';
 const CORE = ['/app','/','/assets/styles.css','/assets/app.js','/manifest.webmanifest'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE)).then(() => self.skipWaiting()));
