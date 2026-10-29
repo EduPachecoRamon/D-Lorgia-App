@@ -1,8 +1,8 @@
-const CACHE = 'dlorgia-orienta-v331-layout-hotfix';
+const CACHE = 'dlorgia-orienta-v340-personal-guide';
 const CORE = [
   '/app', '/',
-  '/assets/styles-v331.css',
-  '/assets/app-v331.js',
+  '/assets/styles-v340.css',
+  '/assets/app-v340.js',
   '/manifest.webmanifest'
 ];
 

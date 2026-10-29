@@ -1,8 +1,9 @@
-# D’Lorgia Orienta v3.3 — LÓGICA TOTAL — App de orientación y acompañamiento
+# D’Lorgia Orienta v3.4 — ORIENTADOR PERSONAL — App de orientación y acompañamiento
 
 Prototipo académico móvil centrado en una idea simple: **ayudar al paciente a comprender un tratamiento, organizar sus expectativas y continuar hacia una evaluación profesional sin convertir la IA en un médico virtual.**
 
 ## Módulos de la app
+- **Orientador Personal:** recorrido guiado para quien aún no sabe qué camino explorar. Construye un perfil de preferencias y ordena tres opciones del catálogo por afinidad explicable; no diagnostica ni prescribe.
 - **Acceso y cuentas:** registro, login, recuperación local, sesión persistente opcional y datos separados por cuenta en el navegador.
 - **Inicio:** muestra continuidad y accesos rápidos según el recorrido del usuario.
 - **Tratamientos:** catálogo por categorías y detalle de cada opción.
@@ -54,6 +55,7 @@ Las variables de Meta/WhatsApp pueden conservarse para una integración posterio
 - `GET /api/status` — estado de módulos.
 - `GET /api/catalog` — catálogo y objetivos.
 - `POST /api/orientation` — orientación de expectativas.
+- `POST /api/personal-guide` — construye perfil y caminos del Orientador Personal.
 - `POST /api/assistant` — asesor con Gemini + fallback local.
 - `POST /api/evaluation` — prepara la solicitud de evaluación.
 
@@ -66,7 +68,7 @@ Perfil, historial, tratamientos guardados, recordatorios y última orientación 
 npm test
 ```
 
-La versión v3 incluye pruebas del orientador, reglas del asesor, fallback local y rutas existentes.
+La versión v3.4 incluye pruebas del Orientador Personal, autenticación, reglas del Asesor, fallback local, agenda, reservas y rutas existentes. Estado actual: **24/24 pruebas aprobadas**.
 
 
 ## Novedades v3.1–v3.2
@@ -83,3 +85,9 @@ La versión v3 incluye pruebas del orientador, reglas del asesor, fallback local
 
 ## Nota sobre autenticación
 El registro/login de v3.3 es **funcional para el prototipo en un mismo navegador**. Las claves se derivan con PBKDF2 + SHA-256 y salt aleatorio; no se guarda la clave en texto plano. Para una versión de producción multi-dispositivo, sustituye esta capa por Firebase Auth, Supabase Auth, Auth0 u otro proveedor de identidad con recuperación verificada.
+
+
+## Orientador Personal v3.4
+El Orientador Personal conecta las páginas que ya existían en la app. Usa datos del onboarding como punto de partida, genera un perfil guardado por cuenta y lo reutiliza en Tratamientos, Detalle, Expectativas, Asesor, Evaluación, Seguimiento y Mi espacio. Los perfiles Clara, Alma y Nexo solo modifican el estilo de acompañamiento; el motor de afinidad y las reglas de seguridad son los mismos.
+
+Consulta `docs/V3_4_ORIENTADOR_PERSONAL.md` para la arquitectura completa.

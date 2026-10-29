@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
-const js = fs.readFileSync(path.join(root, 'public/assets/app-v331.js'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'public/assets/styles-v331.css'), 'utf8');
+const js = fs.readFileSync(path.join(root, 'public/assets/app-v340.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'public/assets/styles-v340.css'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'public/service-worker.js'), 'utf8');
 
 test('frontend incluye login, registro y recuperación local', () => {
@@ -33,19 +33,37 @@ test('fondos ambientales repiten motivos grandes y animados', () => {
   assert.match(js, /login: \{ primary: 'sparkles'/);
 });
 
-test('asesor incluye estado visual de consulta y cache v3.3.1', () => {
+test('asesor incluye estado visual de consulta y cache v3.4', () => {
   assert.match(js, /typing-dots/);
   assert.match(js, /is-thinking/);
   assert.match(css, /advisorBreath/);
-  assert.match(sw, /dlorgia-orienta-v331-layout-hotfix/);
+  assert.match(sw, /dlorgia-orienta-v340-personal-guide/);
 });
 
 
-test('hotfix v3.3.1 evita mezcla de assets y mantiene el fondo detrás', () => {
-  assert.match(html, /styles-v331\.css/);
-  assert.match(html, /app-v331\.js/);
-  assert.match(html, /critical-v331/);
+test('v3.4 mantiene el hotfix de layout y usa assets versionados', () => {
+  assert.match(html, /styles-v340\.css/);
+  assert.match(html, /app-v340\.js/);
+  assert.match(html, /critical-v340/);
   assert.match(css, /\.ambient-layer\{z-index:0!important\}/);
   assert.match(css, /\.auth-form\{display:none!important\}/);
   assert.match(css, /\.screen::before,.screen::after\{content:none!important/);
+});
+
+
+test('Orientador Personal está integrado como módulo propio y no reemplaza al Asesor', () => {
+  assert.match(html, /id="guide"/);
+  assert.match(html, /ORIENTADOR PERSONAL/);
+  assert.ok(js.includes('/api/personal-guide'));
+  assert.match(js, /renderGuideResult/);
+  assert.match(js, /advisorContextText/);
+  assert.match(css, /guide-match-card/);
+});
+
+test('Orientador conecta Tratamientos, Asesor, Evaluación, Seguimiento y Mi espacio', () => {
+  assert.match(js, /guideMatchFor/);
+  assert.match(js, /openGuideEvaluation/);
+  assert.match(js, /portal-guide-summary/);
+  assert.match(js, /Orientador Personal - caminos para explorar/);
+  assert.match(js, /Crear perfil del Orientador/);
 });

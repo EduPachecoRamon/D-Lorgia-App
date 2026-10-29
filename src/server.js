@@ -10,6 +10,7 @@ import { sendButtons, sendList, sendText } from './services/meta.js';
 import { answerWithAI, answerWithAIDetails, getAIState } from './services/ai.js';
 import { orientationCatalog, orientationGoals } from './data/orientation.js';
 import { calculateOrientation } from './services/calculator.js';
+import { buildPersonalGuide } from './services/personal-guide.js';
 import { branches } from './data/knowledge.js';
 import { getSchedule, reserveSlot, getSchedulingInfo } from './services/scheduling.js';
 
@@ -146,14 +147,14 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/status') {
     return json(res, 200, {
       service: "D'Lorgia Orienta",
-      version: '3.3.0',
+      version: '3.4.0',
       status: 'ok',
       whatsappConfigured: Boolean(config.accessToken && config.phoneNumberId),
       aiConfigured: getAIState().configured,
       aiProvider: getAIState().provider,
       aiModel: getAIState().model,
       assistantAvailable: true,
-      modules: ['tratamientos', 'orientación', 'asesor personalizado', 'agenda', 'seguimiento', 'alarmas', 'mi espacio', 'evaluación', 'registro local', 'sesión por cuenta'],
+      modules: ['tratamientos', 'orientación', 'asesor personalizado', 'agenda', 'seguimiento', 'alarmas', 'mi espacio', 'evaluación', 'registro local', 'sesión por cuenta', 'orientador personal'],
       scheduling: getSchedulingInfo()
     });
   }
@@ -185,6 +186,16 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, calculateOrientation(body));
     } catch (error) {
       return json(res, error.code === 'NOT_FOUND' ? 404 : 400, { error: error.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/personal-guide') {
+    try {
+      const body = await readJson(req);
+      return json(res, 200, buildPersonalGuide(body));
+    } catch (error) {
+      console.error('[PERSONAL GUIDE ERROR]', error);
+      return json(res, 400, { error: 'No se pudo construir el perfil de orientación.' });
     }
   }
 

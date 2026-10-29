@@ -1,4 +1,4 @@
-const DLORGIA_BUILD = '3.3.1-layout-hotfix';
+const DLORGIA_BUILD = '3.4.0-personal-guide';
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
@@ -18,7 +18,7 @@ const LEGACY_MIGRATION_KEY = 'dlorgia:auth:legacyMigrated:v1';
 const USER_SCOPED_KEYS = new Set([
   'dlorgia:lastOrientation', 'dlorgia:history', 'dlorgia:profile', 'dlorgia:reminders:v3',
   'dlorgia:savedTreatments', 'dlorgia:advisorMemory:v1', 'dlorgia:preferences:v1',
-  'dlorgia:onboardingComplete', 'dlorgia:lastEvaluation'
+  'dlorgia:onboardingComplete', 'dlorgia:lastEvaluation', 'dlorgia:personalGuide:v1'
 ]);
 
 let activeIdentity = null;
@@ -41,6 +41,9 @@ let selectedTreatment = null;
 let advisorFocus = 'orientacion';
 let navStack = ['home'];
 let activeCategory = 'Todas';
+let guideStep = null;
+let guideDraft = {};
+let guideBusy = false;
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -81,6 +84,8 @@ function rememberAdvisor(role, text) {
 }
 function getPreferences() { return store.get('dlorgia:preferences:v1', {}); }
 function savePreferences(value) { store.set('dlorgia:preferences:v1', value); }
+function getPersonalGuide() { return store.get('dlorgia:personalGuide:v1', null); }
+function setPersonalGuide(value) { store.set('dlorgia:personalGuide:v1', value); }
 
 
 function icon(name, className = 'ui-icon') {
@@ -91,6 +96,7 @@ const ambientScenes = {
   login: { primary: 'sparkles', secondary: 'leaf', accents: ['sparkles','heart','lock'] },
   onboarding: { primary: 'sparkles', secondary: 'heart', accents: ['sparkles','heart','calendar'] },
   home: { primary: 'sparkles', secondary: 'heart-pulse', accents: ['sparkles','calendar','heart'] },
+  guide: { primary: 'compass', secondary: 'sparkles', accents: ['compass','target','sparkles'] },
   catalog: { primary: 'scan', secondary: 'sparkles', accents: ['scan','target','sparkles'] },
   detail: { primary: 'sparkles', secondary: 'scan', accents: ['sparkles','target','heart'] },
   calculator: { primary: 'target', secondary: 'clock', accents: ['target','sparkles','clock'] },
@@ -167,8 +173,10 @@ function migrateLegacyData(accountId) {
   rawStore.set(LEGACY_MIGRATION_KEY, { accountId, copied, at: new Date().toISOString() });
 }
 function loadUserState() {
+  guideStep = null;
+  guideDraft = {};
   currentOrientation = store.get('dlorgia:lastOrientation');
-  selectedTreatment = currentOrientation?.treatment?.id || null;
+  selectedTreatment = currentOrientation?.treatment?.id || getPersonalGuide()?.matches?.[0]?.id || null;
   if (selectedTreatment && $('#treatment-select')) $('#treatment-select').value = selectedTreatment;
   if (currentOrientation?.treatment?.name && $('#eval-interest')) $('#eval-interest').value = currentOrientation.treatment.name;
 }
@@ -291,6 +299,24 @@ function setNavActive(id) {
   $$('.bottom-nav [data-nav]').forEach((btn) => btn.classList.toggle('active', btn.dataset.nav === id));
 }
 
+function applyGuideToCalculator() {
+  const guide = getPersonalGuide();
+  if (!guide) return;
+  const preferredId = selectedTreatment || guide.matches?.[0]?.id;
+  if (preferredId && $('#treatment-select')) $('#treatment-select').value = preferredId;
+  if (guide.profile?.goal && $('#goal-select')) $('#goal-select').value = guide.profile.goal;
+  if ($('#sensitivity-select') && guide.profile?.sensitivity) $('#sensitivity-select').value = guide.profile.sensitivity;
+  if ($('#availability-select')) $('#availability-select').value = ['sin_pausa','corta'].includes(guide.profile?.recovery) ? 'rapida' : 'flexible';
+}
+
+function applyGuideToEvaluation() {
+  const guide = getPersonalGuide();
+  if (!guide) return;
+  const top = catalog.find((x) => x.id === (selectedTreatment || guide.matches?.[0]?.id));
+  const interest = $('#eval-interest');
+  if (interest && top && (!interest.value || interest.value === 'Orientación general')) interest.value = `Orientador Personal · ${top.name}`;
+}
+
 function show(id, push = true) {
   if (!document.getElementById(id)) return;
   $$('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
@@ -301,11 +327,14 @@ function show(id, push = true) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (id === 'home') renderHome();
+  if (id === 'guide') renderGuide();
   if (id === 'summary') renderSummary();
   if (id === 'followup') renderFollowUp();
   if (id === 'portal') renderPortal();
   if (id === 'catalog') renderCatalog();
   if (id === 'assistant') renderAdvisor();
+  if (id === 'calculator') applyGuideToCalculator();
+  if (id === 'evaluation') applyGuideToEvaluation();
 }
 
 function goBack() {
@@ -339,6 +368,7 @@ function renderHome() {
   const box = $('#home-continuity');
   if (!box) return;
   const profile = getProfile();
+  const guide = getPersonalGuide();
   const greeting = $('#home-personal-greeting');
   if (greeting) {
     greeting.textContent = profile.name ? `Hola, ${profile.name}. Tu recorrido sigue aquí.` : '';
@@ -349,9 +379,24 @@ function renderHome() {
   if (statePill) {
     if (evaluation?.date) statePill.textContent = `Evaluación programada · ${formatShortDate(evaluation.date, evaluation.time || '')}`;
     else if (currentOrientation?.treatment?.name) statePill.textContent = `Continúa · ${currentOrientation.treatment.name}`;
+    else if (guide?.matches?.length) statePill.textContent = `Orientador listo · ${guide.matches[0].name}`;
     else if (store.get('dlorgia:onboardingComplete', false)) statePill.textContent = 'Tu recorrido ya está personalizado';
     else statePill.textContent = 'Orientación + acompañamiento';
   }
+
+  const guideResume = $('#home-guide-resume');
+  if (guideResume) {
+    if (guide?.matches?.length) {
+      const top = guide.matches[0];
+      guideResume.classList.remove('hidden');
+      guideResume.innerHTML = `<span class="guide-resume-icon">${icon('compass')}</span><span><small>ORIENTADOR PERSONAL · ${escapeHtml(guide.guide?.name || 'D’Lorgia')}</small><b>Tu camino principal para explorar: ${escapeHtml(top.name)}</b><em>${escapeHtml(top.affinity)} afinidad con tus preferencias · ${escapeHtml(guide.profile?.goalLabel || '')}</em></span><button id="resume-guide">Ver perfil →</button>`;
+      $('#resume-guide').onclick = () => { guideStep = 'result'; show('guide'); };
+    } else {
+      guideResume.classList.add('hidden');
+      guideResume.innerHTML = '';
+    }
+  }
+
   renderPlan();
   if (!currentOrientation) {
     box.classList.add('hidden');
@@ -363,6 +408,185 @@ function renderHome() {
     <span><b>Continúa: ${escapeHtml(currentOrientation.treatment.name)}</b><small>${escapeHtml(currentOrientation.goalNote)}</small></span>
     <button id="continue-current" aria-label="Continuar orientación">→</button>`;
   $('#continue-current').onclick = () => show('summary');
+}
+
+const GUIDE_STYLES_UI = {
+  clara: { name: 'Clara', label: 'Directa', icon: 'arrow-right', text: 'Voy al punto. Te muestro coincidencias claras y qué revisar después.' },
+  alma: { name: 'Alma', label: 'Acompañante', icon: 'heart', text: 'Vamos paso a paso. Te explico el recorrido con calma y contexto.' },
+  nexo: { name: 'Nexo', label: 'Analítico', icon: 'target', text: 'Comparo criterios y te explico por qué cada opción aparece.' }
+};
+
+const GUIDE_AREA_OPTIONS = [
+  ['Piel','Piel / rostro','sparkles'], ['Corporal','Cuerpo','heart-pulse'], ['Capilar','Cabello','leaf'],
+  ['Depilación','Depilación','scan'], ['Tatuajes','Tatuajes','target'], ['Todas','Aún no lo sé','compass']
+];
+const GUIDE_GOALS = [
+  ['cuidado','Cuidado general'], ['textura','Mejorar textura'], ['manchas','Apariencia de manchas'],
+  ['firmeza','Firmeza'], ['lineas','Líneas de expresión'], ['hidratacion','Hidratación / confort'], ['brotes','Brotes / acné']
+];
+const GUIDE_PRIORITIES = [
+  ['resultados','Entender resultados'], ['recuperacion','Recuperación corta'], ['baja_intervencion','Menor intervención'],
+  ['cuidados','Cuidados claros'], ['acompanamiento','Acompañamiento']
+];
+
+function guideDefaults() {
+  const saved = getPersonalGuide();
+  if (saved?.profile) return {
+    guideStyle: saved.guide?.id || 'alma', area: saved.profile.area || 'Todas', goal: saved.profile.goal || 'cuidado',
+    priorities: [...(saved.profile.priorities || [])], recovery: saved.profile.recovery || 'flexible',
+    intensity: saved.profile.intensity || 'abierta', sensitivity: saved.profile.sensitivity || 'no_indicado',
+    treatmentId: saved.profile.treatmentId || ''
+  };
+  const prefs = getPreferences();
+  const areaMap = { piel: 'Piel', corporal: 'Corporal', capilar: 'Capilar', depilacion: 'Depilación', tatuajes: 'Tatuajes', explorar: 'Todas' };
+  return {
+    guideStyle: 'alma', area: areaMap[prefs.interest] || 'Todas', goal: 'cuidado',
+    priorities: prefs.priority ? [prefs.priority] : [],
+    recovery: prefs.priority === 'recuperacion' ? 'corta' : 'flexible', intensity: 'abierta',
+    sensitivity: 'no_indicado', treatmentId: selectedTreatment || ''
+  };
+}
+
+function resetGuideDraft(useSaved = true) {
+  guideDraft = useSaved ? guideDefaults() : { guideStyle: 'alma', area: 'Todas', goal: 'cuidado', priorities: [], recovery: 'flexible', intensity: 'abierta', sensitivity: 'no_indicado', treatmentId: '' };
+}
+
+function guideProgress(step) {
+  const progress = $('#guide-progress');
+  if (!progress) return;
+  const index = step === 'result' ? 5 : Number(step || 0);
+  const labels = ['Estilo','Área','Objetivo','Prioridades','Preferencias','Tu ruta'];
+  progress.innerHTML = labels.map((label, i) => `<span class="${i < index ? 'done' : i === index ? 'active' : ''}"><i>${i < index ? '✓' : i + 1}</i><small>${label}</small></span>`).join('');
+}
+
+function guideBack() {
+  if (guideStep === 'result') guideStep = 4;
+  else guideStep = Math.max(0, Number(guideStep || 0) - 1);
+  renderGuide();
+}
+
+function guideNext(step) { guideStep = step; renderGuide(); }
+
+function renderGuide() {
+  const box = $('#guide-content');
+  if (!box) return;
+  if (guideStep === null) {
+    resetGuideDraft(true);
+    guideStep = getPersonalGuide() ? 'result' : 0;
+  }
+  guideProgress(guideStep);
+  const saved = getPersonalGuide();
+
+  if (guideStep === 'result' && saved) {
+    renderGuideResult(saved);
+    return;
+  }
+
+  const style = GUIDE_STYLES_UI[guideDraft.guideStyle] || GUIDE_STYLES_UI.alma;
+  const sharedHead = `<div class="guide-companion"><span class="guide-avatar guide-${escapeHtml(guideDraft.guideStyle)}">${icon(style.icon)}</span><span><small>${escapeHtml(style.label.toUpperCase())}</small><b>${escapeHtml(style.name)}</b><em>${escapeHtml(style.text)}</em></span></div>`;
+
+  if (guideStep === 0) {
+    box.innerHTML = `<div class="guide-stage">\
+      <div class="guide-stage-copy"><p class="eyebrow">PASO 1 · ESTILO DE ACOMPAÑAMIENTO</p><h3>¿Cómo prefieres que te oriente?</h3><p class="muted">Los tres usan la misma información y las mismas reglas. Solo cambia la forma de acompañarte.</p></div>\
+      <div class="guide-personas">${Object.entries(GUIDE_STYLES_UI).map(([id,item]) => `<button class="guide-persona ${guideDraft.guideStyle===id?'selected':''}" data-guide-style="${id}"><span class="guide-avatar guide-${id}">${icon(item.icon)}</span><span><small>${escapeHtml(item.label)}</small><b>${escapeHtml(item.name)}</b><em>${escapeHtml(item.text)}</em></span><i>${guideDraft.guideStyle===id?'✓':'→'}</i></button>`).join('')}</div>\
+      <div class="guide-actions"><button class="primary" id="guide-style-next">Continuar con ${escapeHtml(style.name)} →</button></div></div>`;
+    $$('[data-guide-style]').forEach((btn) => btn.onclick = () => { guideDraft.guideStyle = btn.dataset.guideStyle; renderGuide(); });
+    $('#guide-style-next').onclick = () => guideNext(1);
+    return;
+  }
+
+  if (guideStep === 1) {
+    box.innerHTML = `${sharedHead}<div class="guide-stage"><div class="guide-stage-copy"><p class="eyebrow">PASO 2 · ÁREA</p><h3>¿Qué quieres explorar primero?</h3><p class="muted">Si todavía no lo tienes claro, elige “Aún no lo sé”.</p></div><div class="guide-choice-grid">${GUIDE_AREA_OPTIONS.map(([id,label,ico]) => `<button class="guide-choice ${guideDraft.area===id?'selected':''}" data-guide-area="${escapeHtml(id)}">${icon(ico)}<b>${escapeHtml(label)}</b><span>${guideDraft.area===id?'Seleccionado':'Explorar'}</span></button>`).join('')}</div><div class="guide-actions"><button class="secondary" id="guide-back">← Atrás</button><button class="primary" id="guide-area-next">Continuar →</button></div></div>`;
+    $$('[data-guide-area]').forEach((btn) => btn.onclick = () => { guideDraft.area = btn.dataset.guideArea; renderGuide(); });
+    $('#guide-back').onclick = guideBack; $('#guide-area-next').onclick = () => guideNext(2); return;
+  }
+
+  if (guideStep === 2) {
+    box.innerHTML = `${sharedHead}<div class="guide-stage"><div class="guide-stage-copy"><p class="eyebrow">PASO 3 · OBJETIVO</p><h3>¿Qué quieres comprender o mejorar?</h3><p class="muted">Esto sirve para cruzar tu objetivo con las fichas del catálogo, no para diagnosticar.</p></div><div class="guide-goals">${GUIDE_GOALS.map(([id,label]) => `<button class="guide-goal ${guideDraft.goal===id?'selected':''}" data-guide-goal="${id}"><span>${guideDraft.goal===id?'✓':'◇'}</span><b>${escapeHtml(label)}</b></button>`).join('')}</div><div class="guide-actions"><button class="secondary" id="guide-back">← Atrás</button><button class="primary" id="guide-goal-next">Continuar →</button></div></div>`;
+    $$('[data-guide-goal]').forEach((btn) => btn.onclick = () => { guideDraft.goal = btn.dataset.guideGoal; renderGuide(); });
+    $('#guide-back').onclick = guideBack; $('#guide-goal-next').onclick = () => guideNext(3); return;
+  }
+
+  if (guideStep === 3) {
+    box.innerHTML = `${sharedHead}<div class="guide-stage"><div class="guide-stage-copy"><p class="eyebrow">PASO 4 · PRIORIDADES</p><h3>¿Qué importa más para ti?</h3><p class="muted">Elige hasta 3. El Orientador las conservará para Tratamientos, Asesor y Evaluación.</p></div><div class="guide-priorities">${GUIDE_PRIORITIES.map(([id,label]) => `<button class="guide-priority ${guideDraft.priorities.includes(id)?'selected':''}" data-guide-priority="${id}"><i>${guideDraft.priorities.includes(id)?'✓':'+'}</i><b>${escapeHtml(label)}</b></button>`).join('')}</div><p class="guide-selection-count">${guideDraft.priorities.length}/3 prioridades seleccionadas</p><div class="guide-actions"><button class="secondary" id="guide-back">← Atrás</button><button class="primary" id="guide-priority-next">Continuar →</button></div></div>`;
+    $$('[data-guide-priority]').forEach((btn) => btn.onclick = () => {
+      const id = btn.dataset.guidePriority; const set = new Set(guideDraft.priorities);
+      if (set.has(id)) set.delete(id); else if (set.size < 3) set.add(id); else return toast('Puedes elegir hasta 3 prioridades.');
+      guideDraft.priorities = [...set]; renderGuide();
+    });
+    $('#guide-back').onclick = guideBack; $('#guide-priority-next').onclick = () => guideNext(4); return;
+  }
+
+  if (guideStep === 4) {
+    const treatmentOptions = ['<option value="">No tengo uno en mente</option>', ...catalog.map((x) => `<option value="${escapeHtml(x.id)}" ${guideDraft.treatmentId===x.id?'selected':''}>${escapeHtml(x.category)} · ${escapeHtml(x.name)}</option>`)].join('');
+    box.innerHTML = `${sharedHead}<div class="guide-stage"><div class="guide-stage-copy"><p class="eyebrow">PASO 5 · PREFERENCIAS PRÁCTICAS</p><h3>Ajustemos el recorrido a tu rutina</h3><p class="muted">Estas respuestas solo ajustan la afinidad del prototipo. No sustituyen criterios profesionales.</p></div><form id="guide-practical-form" class="panel form-grid guide-practical">\
+      <label>Tiempo de recuperación que prefieres<select id="guide-recovery"><option value="sin_pausa" ${guideDraft.recovery==='sin_pausa'?'selected':''}>Idealmente sin pausa</option><option value="corta" ${guideDraft.recovery==='corta'?'selected':''}>1–2 días / recuperación corta</option><option value="flexible" ${guideDraft.recovery==='flexible'?'selected':''}>Soy flexible</option></select></label>\
+      <label>Intensidad que prefieres explorar<select id="guide-intensity"><option value="minima" ${guideDraft.intensity==='minima'?'selected':''}>Lo menos invasivo posible</option><option value="intermedia" ${guideDraft.intensity==='intermedia'?'selected':''}>Intermedia</option><option value="abierta" ${guideDraft.intensity==='abierta'?'selected':''}>Estoy abierto/a a comparar</option></select></label>\
+      <label>Sensibilidad conocida<select id="guide-sensitivity"><option value="no_indicado" ${guideDraft.sensitivity==='no_indicado'?'selected':''}>Prefiero no indicarlo</option><option value="normal" ${guideDraft.sensitivity==='normal'?'selected':''}>Sin sensibilidad especial conocida</option><option value="sensible" ${guideDraft.sensitivity==='sensible'?'selected':''}>Tengo piel/zona sensible</option></select></label>\
+      <label>¿Ya quieres comparar algo?<select id="guide-treatment">${treatmentOptions}</select></label>\
+      <div class="guide-actions form-actions"><button class="secondary" id="guide-back" type="button">← Atrás</button><button class="primary" type="submit">Construir mi perfil →</button></div></form></div>`;
+    $('#guide-back').onclick = guideBack;
+    $('#guide-practical-form').onsubmit = submitPersonalGuide;
+  }
+}
+
+async function submitPersonalGuide(event) {
+  event.preventDefault();
+  if (guideBusy) return;
+  guideBusy = true;
+  guideDraft.recovery = $('#guide-recovery').value;
+  guideDraft.intensity = $('#guide-intensity').value;
+  guideDraft.sensitivity = $('#guide-sensitivity').value;
+  guideDraft.treatmentId = $('#guide-treatment').value;
+  const submit = event.currentTarget.querySelector('button[type="submit"]');
+  if (submit) { submit.disabled = true; submit.textContent = 'Comparando tu perfil…'; }
+  try {
+    const result = await api('/api/personal-guide', { method: 'POST', body: JSON.stringify(guideDraft) });
+    setPersonalGuide(result);
+    guideStep = 'result';
+    if (!selectedTreatment && result.matches?.[0]?.id) selectedTreatment = result.matches[0].id;
+    renderGuide(); renderHome(); renderCatalog(); renderAdvisor(); renderPortal(); renderFollowUp();
+    toast('Tu perfil del Orientador Personal quedó guardado.', 'success');
+  } catch (error) {
+    toast(error.message || 'No pude construir el perfil.');
+    if (submit) { submit.disabled = false; submit.textContent = 'Construir mi perfil →'; }
+  } finally { guideBusy = false; }
+}
+
+function renderGuideResult(result) {
+  const box = $('#guide-content');
+  if (!box) return;
+  const guide = GUIDE_STYLES_UI[result.guide?.id] || GUIDE_STYLES_UI.alma;
+  const top = result.matches?.[0];
+  const profile = result.profile || {};
+  const priorityChips = (profile.priorityLabels || []).map((x) => `<span>${escapeHtml(x)}</span>`).join('');
+  box.innerHTML = `<div class="guide-result">\
+    <div class="guide-result-hero"><span class="guide-avatar guide-${escapeHtml(result.guide?.id || 'alma')}">${icon(guide.icon)}</span><div><p class="eyebrow">TU PERFIL DE ORIENTACIÓN</p><h3>${escapeHtml(guide.name)} organizó tu ruta</h3><p>${escapeHtml(result.guide?.intro || guide.text)}</p></div><span class="guide-result-check">✓</span></div>\
+    <div class="guide-profile-grid"><div><small>Área</small><b>${escapeHtml(profile.areaLabel || 'Exploratoria')}</b></div><div><small>Objetivo</small><b>${escapeHtml(profile.goalLabel || 'Cuidado general')}</b></div><div class="wide"><small>Prioridades</small><span class="guide-profile-chips">${priorityChips || '<span>Explorar con calma</span>'}</span></div></div>\
+    <div class="guide-caution">${icon('shield')}<p>${escapeHtml(result.caution || '')}</p></div>\
+    <div class="section-minihead"><div><p class="eyebrow">CAMINOS PARA EXPLORAR</p><h3>Ordenados por afinidad con tus preferencias</h3></div></div>\
+    <div class="guide-matches">${(result.matches || []).map((m) => `<article class="guide-match-card ${m.rank===1?'top':''}"><div class="guide-match-head"><span class="match-rank">${m.rank}</span><span><small>${escapeHtml(m.category)}</small><b>${escapeHtml(m.name)}</b></span><em>${escapeHtml(m.affinity)}</em></div><p>${escapeHtml(m.short)}</p><div class="affinity-track"><span style="width:${Math.max(18,Math.min(100,m.score))}%"></span></div><div class="guide-why"><b>Por qué aparece</b>${list(m.reasons)}</div><div class="guide-consider"><b>A considerar</b>${list(m.considerations)}</div><div class="guide-card-actions"><button class="primary" data-guide-open="${escapeHtml(m.id)}">Explorar tratamiento</button><button class="secondary" data-guide-ask="${escapeHtml(m.id)}">Preguntar al Asesor</button></div></article>`).join('')}</div>\
+    <div class="guide-route"><p class="eyebrow">TU RUTA EN D’LORGIA</p><h3>El Orientador conecta lo que ya existe</h3><div class="guide-route-grid"><button data-nav="catalog">${icon('scan')}<b>Tratamientos</b><span>Compara tus coincidencias y revisa fichas.</span></button><button id="guide-route-advisor">${icon('sparkles')}<b>Asesor</b><span>Pregunta usando este perfil como contexto.</span></button><button id="guide-route-evaluation">${icon('stethoscope')}<b>Evaluación</b><span>Confirma profesionalmente el camino.</span></button><button data-nav="followup">${icon('bell')}<b>Seguimiento</b><span>Organiza recordatorios y continuidad.</span></button></div></div>\
+    <div class="notice">${escapeHtml(result.disclaimer || '')}</div>\
+    <div class="guide-actions"><button class="secondary" id="guide-adjust">Ajustar respuestas</button><button class="ghost" id="guide-restart">Empezar de nuevo</button></div></div>`;
+
+  $$('[data-guide-open]').forEach((btn) => btn.onclick = () => openDetail(btn.dataset.guideOpen));
+  $$('[data-guide-ask]').forEach((btn) => btn.onclick = () => { selectedTreatment = btn.dataset.guideAsk; advisorFocus = 'orientacion'; show('assistant'); });
+  $$('#guide-content [data-nav]').forEach((btn) => btn.onclick = () => show(btn.dataset.nav));
+  $('#guide-route-advisor').onclick = () => { if (top?.id) selectedTreatment = top.id; advisorFocus = 'orientacion'; show('assistant'); };
+  $('#guide-route-evaluation').onclick = () => openGuideEvaluation(top?.id);
+  $('#guide-adjust').onclick = () => { resetGuideDraft(true); guideStep = 1; renderGuide(); };
+  $('#guide-restart').onclick = () => { resetGuideDraft(false); guideStep = 0; renderGuide(); };
+}
+
+function openGuideEvaluation(treatmentId = '') {
+  const match = catalog.find((x) => x.id === treatmentId) || catalog.find((x) => x.id === getPersonalGuide()?.matches?.[0]?.id);
+  if (match && $('#eval-interest')) $('#eval-interest').value = `Orientador Personal · ${match.name}`;
+  show('evaluation');
+}
+
+function guideMatchFor(treatmentId) {
+  return getPersonalGuide()?.matches?.find((x) => x.id === treatmentId) || null;
 }
 
 function renderCategoryFilters() {
@@ -380,12 +604,17 @@ function renderCatalog() {
   if (!$('#catalog-list')) return;
   renderCategoryFilters();
   const items = activeCategory === 'Todas' ? catalog : catalog.filter((x) => x.category === activeCategory);
-  $('#catalog-list').innerHTML = items.length ? items.map((x) => `
-    <button class="treatment-card" data-treatment="${escapeHtml(x.id)}">
+  const guide = getPersonalGuide();
+  const matchMap = new Map((guide?.matches || []).map((m) => [m.id, m]));
+  $('#catalog-list').innerHTML = items.length ? items.map((x) => {
+    const match = matchMap.get(x.id);
+    return `
+    <button class="treatment-card ${match ? 'guide-ranked' : ''}" data-treatment="${escapeHtml(x.id)}">
       <span class="avatar">${categoryIcon(x.category)}</span>
-      <span><b>${escapeHtml(x.name)}</b><small>${escapeHtml(x.short)}</small></span>
+      <span><b>${escapeHtml(x.name)}</b><small>${escapeHtml(x.short)}</small>${match ? `<em class="guide-match-badge">${icon('compass','ui-icon mini')} #${match.rank} · Afinidad ${escapeHtml(match.affinity.toLowerCase())}</em>` : ''}</span>
       <span class="card-arrow">${icon('chevron-right')}</span>
-    </button>`).join('') : '<div class="empty">No hay tratamientos en esta categoría.</div>';
+    </button>`;
+  }).join('') : '<div class="empty">No hay tratamientos en esta categoría.</div>';
   $$('[data-treatment]').forEach((btn) => btn.onclick = () => openDetail(btn.dataset.treatment));
 }
 
@@ -401,6 +630,7 @@ function openDetail(id, push = true) {
   if (!treatment) return;
   selectedTreatment = id;
   const isSaved = getSavedTreatments().includes(id);
+  const guideMatch = guideMatchFor(id);
   $('#detail-name').textContent = treatment.name;
   $('#detail-content').innerHTML = `
     <div class="detail-hero">
@@ -408,6 +638,7 @@ function openDetail(id, push = true) {
       <h3>${escapeHtml(treatment.name)}</h3>
       <p>${escapeHtml(treatment.description)}</p>
     </div>
+    ${guideMatch ? `<div class="panel detail-guide-match"><div class="panel-title"><span class="panel-icon">${icon('compass')}</span><div><p class="eyebrow">ORIENTADOR PERSONAL · #${guideMatch.rank}</p><h3>Afinidad ${escapeHtml(guideMatch.affinity.toLowerCase())} con tu perfil</h3></div></div><div class="affinity-track"><span style="width:${Math.max(18,Math.min(100,guideMatch.score))}%"></span></div><div class="guide-why compact"><b>Por qué aparece en tu ruta</b>${list(guideMatch.reasons)}</div><button class="ghost full" id="detail-guide-profile">Revisar mi perfil del Orientador</button></div>` : `<div class="panel detail-guide-empty"><div class="panel-title"><span class="panel-icon">${icon('compass')}</span><div><p class="eyebrow">ORIENTADOR PERSONAL</p><h3>¿Quieres comparar esta opción con tus prioridades?</h3></div></div><p class="muted">El Orientador puede cruzar este tratamiento con tu objetivo, recuperación e intensidad preferida.</p><button class="secondary full" id="detail-guide-start">Usar en Orientador Personal</button></div>`}
     <div class="panel"><div class="panel-title"><span class="panel-icon">${icon('target')}</span><div><p class="eyebrow">OBJETIVO</p><h3>¿Qué busca orientar?</h3></div></div><p class="muted">${escapeHtml(treatment.objective || treatment.short)}</p></div>
     <div class="action-stack">
       <button class="primary" id="detail-calc">Orientar mis expectativas →</button>
@@ -418,6 +649,8 @@ function openDetail(id, push = true) {
   $('#detail-calc').onclick = () => show('calculator');
   $('#detail-assistant').onclick = () => { advisorFocus = 'orientacion'; show('assistant'); };
   $('#detail-save').onclick = () => toggleSavedTreatment(id);
+  if ($('#detail-guide-profile')) $('#detail-guide-profile').onclick = () => { guideStep = 'result'; show('guide'); };
+  if ($('#detail-guide-start')) $('#detail-guide-start').onclick = () => { resetGuideDraft(true); guideDraft.treatmentId = id; guideStep = 1; show('guide'); };
   show('detail', push);
 }
 
@@ -499,7 +732,8 @@ function downloadSummary() {
 
 function renderAdvisor() {
   const profile = getProfile();
-  const treatment = catalog.find((x) => x.id === selectedTreatment) || currentOrientation?.treatment || null;
+  const guide = getPersonalGuide();
+  const treatment = catalog.find((x) => x.id === selectedTreatment) || currentOrientation?.treatment || (guide?.matches?.[0] ? catalog.find((x) => x.id === guide.matches[0].id) : null);
   const greeting = $('#advisor-greeting');
   if (greeting) greeting.textContent = profile.name
     ? `${profile.name}, te ayudo a entender tu proceso y organizar tu siguiente paso.`
@@ -507,19 +741,27 @@ function renderAdvisor() {
 
   const context = $('#advisor-context');
   if (!context) return;
+  const prefs = getPreferences();
+  const recent = getAdvisorMemory().filter((x) => x.role === 'user').slice(-2);
+  const guideMatch = treatment ? guideMatchFor(treatment.id) : null;
   if (treatment) {
-    const prefs = getPreferences();
-    const recent = getAdvisorMemory().filter((x) => x.role === 'user').slice(-2);
     context.innerHTML = `<div class="context-row"><span><small>Contexto actual</small><b>${escapeHtml(treatment.name)}</b></span><button class="secondary" id="change-context" type="button">Cambiar</button></div>
+      ${guide ? `<div class="advisor-guide-context"><span>${icon('compass')}</span><div><small>Orientador Personal · ${escapeHtml(guide.guide?.name || 'D’Lorgia')}</small><b>${escapeHtml(guide.profile?.goalLabel || 'Perfil de orientación')}</b><p>${guideMatch ? `Este tratamiento aparece #${guideMatch.rank} con afinidad ${escapeHtml(guideMatch.affinity.toLowerCase())}.` : 'El Asesor está usando tus prioridades como contexto adicional.'}</p></div><button id="advisor-open-guide" class="ghost" type="button">Ver perfil</button></div>` : ''}
       <div class="memory-chips">
         ${prefs.interest ? `<span>Interés: ${escapeHtml(prefs.interest)}</span>` : ''}
         ${prefs.priority ? `<span>Prioridad: ${escapeHtml(prefs.priority)}</span>` : ''}
+        ${(guide?.profile?.priorityLabels || []).map((x) => `<span>Orientador: ${escapeHtml(x)}</span>`).join('')}
         ${recent.map((x) => `<span title="Lo dijiste al asesor">“${escapeHtml(x.text.slice(0,52))}${x.text.length>52?'…':''}”</span>`).join('')}
       </div>`;
     $('#change-context').onclick = () => show('catalog');
+    if ($('#advisor-open-guide')) $('#advisor-open-guide').onclick = () => { guideStep = 'result'; show('guide'); };
+  } else if (guide?.matches?.length) {
+    context.innerHTML = `<div class="context-row"><span><small>Contexto actual</small><b>Perfil del Orientador Personal</b></span><button class="secondary" id="choose-guide-top" type="button">Usar primera coincidencia</button></div><div class="memory-chips"><span>Objetivo: ${escapeHtml(guide.profile?.goalLabel || '')}</span>${(guide.profile?.priorityLabels || []).map((x) => `<span>${escapeHtml(x)}</span>`).join('')}</div>`;
+    $('#choose-guide-top').onclick = () => { selectedTreatment = guide.matches[0].id; renderAdvisor(); };
   } else {
-    context.innerHTML = `<div class="context-row"><span><small>Contexto actual</small><b>Sin tratamiento seleccionado</b></span><button class="secondary" id="choose-context" type="button">Elegir</button></div>`;
+    context.innerHTML = `<div class="context-row"><span><small>Contexto actual</small><b>Sin tratamiento seleccionado</b></span><button class="secondary" id="choose-context" type="button">Elegir</button></div><button class="guide-inline-cta" id="advisor-start-guide" type="button">${icon('compass')} No sé qué elegir · Abrir Orientador Personal →</button>`;
     $('#choose-context').onclick = () => show('catalog');
+    $('#advisor-start-guide').onclick = () => show('guide');
   }
 }
 
@@ -534,12 +776,18 @@ function addBubble(text, who = 'bot') {
 
 function advisorContextText() {
   const profile = getProfile();
+  const guide = getPersonalGuide();
   const treatment = catalog.find((x) => x.id === selectedTreatment);
   const pieces = [
     `Etapa: asesor personalizado`,
     `Enfoque: ${advisorFocus}`,
     treatment ? `Tratamiento seleccionado: ${treatment.name}` : '',
     currentOrientation?.goalNote ? `Objetivo del usuario: ${currentOrientation.goalNote}` : '',
+    guide?.profile?.goalLabel ? `Orientador Personal - objetivo: ${guide.profile.goalLabel}` : '',
+    guide?.profile?.areaLabel ? `Orientador Personal - área: ${guide.profile.areaLabel}` : '',
+    guide?.profile?.priorityLabels?.length ? `Orientador Personal - prioridades: ${guide.profile.priorityLabels.join(', ')}` : '',
+    guide?.matches?.length ? `Orientador Personal - caminos para explorar: ${guide.matches.map((m) => `${m.name} (${m.affinity})`).join(', ')}` : '',
+    guide?.guide?.name ? `Estilo de acompañamiento elegido: ${guide.guide.name} (${guide.guide.label})` : '',
     profile.name ? `Nombre o alias: ${profile.name}` : '',
     getPreferences().interest ? `Interés inicial: ${getPreferences().interest}` : '',
     getPreferences().priority ? `Prioridad declarada: ${getPreferences().priority}` : '',
@@ -652,19 +900,21 @@ function renderReminderList(target, limit = 50) {
 }
 
 function renderFollowUp() {
+  const guide = getPersonalGuide();
   const evalData = store.get('dlorgia:lastEvaluation');
   const reminders = getReminders();
   const hasFollowup = reminders.length > 0;
   const hasAdvisorContinuity = getAdvisorMemory().some((item) => item.role === 'assistant');
-  const treatment = currentOrientation?.treatment?.name || 'Orientación pendiente';
+  const treatment = currentOrientation?.treatment?.name || guide?.matches?.[0]?.name || 'Orientación pendiente';
   const follow = $('#followup-content');
   if (follow) {
     follow.innerHTML = `
       <div class="panel"><p class="eyebrow">PROCESO ACTUAL</p><h3>${escapeHtml(treatment)}</h3><div class="timeline">
-        <div class="timeline-item ${currentOrientation ? 'done' : ''}"><span class="dot">${currentOrientation ? '✓' : '1'}</span><div><b>Orientación inicial</b><p>${currentOrientation ? 'Resumen generado y guardado en tu espacio.' : 'Selecciona un tratamiento y genera tu orientación.'}</p></div></div>
-        <div class="timeline-item ${evalData ? 'done' : ''}"><span class="dot">${evalData ? '✓' : '2'}</span><div><b>Evaluación profesional</b><p>${evalData ? `Solicitud preparada para ${escapeHtml(evalData.branch)}${evalData.date ? ` · ${escapeHtml(evalData.date)}` : ''}.` : 'Pendiente. El equipo profesional confirma la decisión clínica.'}</p></div></div>
-        <div class="timeline-item ${hasFollowup ? 'done' : ''}"><span class="dot">${hasFollowup ? '✓' : '3'}</span><div><b>Cuidados y seguimiento</b><p>${hasFollowup ? `${reminders.length} recordatorio${reminders.length === 1 ? '' : 's'} guardado${reminders.length === 1 ? '' : 's'} para tu continuidad.` : 'Guarda recordatorios para revisar indicaciones y próximos pasos.'}</p></div></div>
-        <div class="timeline-item ${hasAdvisorContinuity ? 'done' : ''}"><span class="dot">${hasAdvisorContinuity ? '✓' : '4'}</span><div><b>Continuidad</b><p>${hasAdvisorContinuity ? 'Ya usaste el asesor como apoyo para comprender tu proceso.' : 'Registra dudas y vuelve al asesor cuando necesites comprender mejor el proceso.'}</p></div></div>
+        <div class="timeline-item ${guide ? 'done' : ''}"><span class="dot">${guide ? '✓' : '1'}</span><div><b>Orientador Personal</b><p>${guide ? `Perfil creado con ${escapeHtml(guide.guide?.name || 'D’Lorgia')}; ${guide.matches?.length || 0} caminos quedaron listos para explorar.` : 'Define objetivo, prioridades y preferencias para construir tu ruta.'}</p></div></div>
+        <div class="timeline-item ${currentOrientation ? 'done' : ''}"><span class="dot">${currentOrientation ? '✓' : '2'}</span><div><b>Orientación de expectativas</b><p>${currentOrientation ? 'Resumen generado y guardado en tu espacio.' : 'Explora un tratamiento y genera una orientación más específica.'}</p></div></div>
+        <div class="timeline-item ${evalData ? 'done' : ''}"><span class="dot">${evalData ? '✓' : '3'}</span><div><b>Evaluación profesional</b><p>${evalData ? `Solicitud preparada para ${escapeHtml(evalData.branch)}${evalData.date ? ` · ${escapeHtml(evalData.date)}` : ''}.` : 'Pendiente. El equipo profesional confirma la decisión clínica.'}</p></div></div>
+        <div class="timeline-item ${hasFollowup ? 'done' : ''}"><span class="dot">${hasFollowup ? '✓' : '4'}</span><div><b>Cuidados y seguimiento</b><p>${hasFollowup ? `${reminders.length} recordatorio${reminders.length === 1 ? '' : 's'} guardado${reminders.length === 1 ? '' : 's'} para tu continuidad.` : 'Guarda recordatorios para revisar indicaciones y próximos pasos.'}</p></div></div>
+        <div class="timeline-item ${hasAdvisorContinuity ? 'done' : ''}"><span class="dot">${hasAdvisorContinuity ? '✓' : '5'}</span><div><b>Continuidad con el Asesor</b><p>${hasAdvisorContinuity ? 'Ya usaste el Asesor como apoyo para comprender tu proceso.' : 'Registra dudas y vuelve al Asesor cuando necesites comprender mejor el proceso.'}</p></div></div>
       </div></div>`;
   }
   renderReminderList($('#reminders-list'));
@@ -672,6 +922,7 @@ function renderFollowUp() {
 
 function renderPortal() {
   const profile = getProfile();
+  const guide = getPersonalGuide();
   const accountBox = $('#account-summary');
   if (accountBox) {
     if (activeIdentity?.kind === 'account') {
@@ -694,6 +945,14 @@ function renderPortal() {
       <div class="stat-card"><strong>${history.length}</strong><span>orientaciones</span></div>
       <div class="stat-card"><strong>${savedIds.length}</strong><span>guardados</span></div>
       <div class="stat-card"><strong>${activeReminders.length}</strong><span>alarmas</span></div>`;
+  }
+
+  const guideBox = $('#portal-guide-summary');
+  if (guideBox) {
+    if (guide?.matches?.length) {
+      const top = guide.matches[0];
+      guideBox.innerHTML = `<div class="portal-guide-card"><span class="guide-avatar guide-${escapeHtml(guide.guide?.id || 'alma')}">${icon(GUIDE_STYLES_UI[guide.guide?.id]?.icon || 'compass')}</span><span><small>${escapeHtml(guide.guide?.name || 'D’Lorgia')} · ${escapeHtml(guide.guide?.label || 'Orientador')}</small><b>${escapeHtml(guide.profile?.goalLabel || 'Perfil de orientación')}</b><em>Primera coincidencia: ${escapeHtml(top.name)} · afinidad ${escapeHtml(top.affinity.toLowerCase())}</em></span></div><div class="guide-profile-chips">${(guide.profile?.priorityLabels || []).map((x) => `<span>${escapeHtml(x)}</span>`).join('')}</div>`;
+    } else guideBox.innerHTML = '<p class="muted">Aún no has creado tu perfil del Orientador Personal. Úsalo para conectar tus prioridades con el catálogo.</p>';
   }
 
   if ($('#history-list')) {
@@ -791,10 +1050,12 @@ function renderPlan() {
   const box = $('#home-plan');
   if (!box) return;
   const onboardingDone = store.get('dlorgia:onboardingComplete', false);
+  const guideDone = Boolean(getPersonalGuide());
   const evaluation = store.get('dlorgia:lastEvaluation');
   const hasReminder = getReminders().some((x) => !x.done);
   const steps = [
     { label: 'Personalizar recorrido', done: onboardingDone, nav: 'portal' },
+    { label: 'Crear perfil del Orientador', done: guideDone, nav: 'guide' },
     { label: 'Generar orientación', done: Boolean(currentOrientation), nav: 'calculator' },
     { label: 'Reservar evaluación', done: Boolean(evaluation), nav: 'evaluation' },
     { label: 'Organizar seguimiento', done: hasReminder, nav: 'followup' }
@@ -806,7 +1067,7 @@ function renderPlan() {
   box.innerHTML = `<div class="plan-head"><span><small>MI PLAN</small><b>${done}/${steps.length} pasos completados</b></span><strong>${pct}%</strong></div>
     <div class="plan-progress"><span style="width:${pct}%"></span></div>
     <div class="plan-steps">${steps.map((x) => `<span class="${x.done ? 'done' : ''}">${x.done ? icon('check','ui-icon mini') : '<span class="plan-dot"></span>'} ${escapeHtml(x.label)}</span>`).join('')}</div>
-    ${next ? `<button class="secondary full" id="plan-next">Siguiente: ${escapeHtml(next.label)} →</button>` : `<div class="plan-complete">${icon('circle-check','ui-icon mini')} Tu recorrido base está organizado. Puedes seguir usando el asesor cuando lo necesites.</div>`}`;
+    ${next ? `<button class="secondary full" id="plan-next">Siguiente: ${escapeHtml(next.label)} →</button>` : `<div class="plan-complete">${icon('circle-check','ui-icon mini')} Tu recorrido base está organizado. Puedes seguir usando el Orientador y el Asesor cuando lo necesites.</div>`}`;
   if (next && $('#plan-next')) $('#plan-next').onclick = () => show(next.nav);
 }
 
@@ -844,7 +1105,7 @@ async function installPWA() {
 
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  try { const reg = await navigator.serviceWorker.register('/service-worker.js?v=331', { updateViaCache: 'none' }); await reg.update(); }
+  try { const reg = await navigator.serviceWorker.register('/service-worker.js?v=340', { updateViaCache: 'none' }); await reg.update(); }
   catch (error) { console.warn('Service worker no disponible', error); }
 }
 

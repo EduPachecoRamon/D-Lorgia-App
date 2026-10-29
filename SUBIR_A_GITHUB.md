@@ -1,4 +1,4 @@
-# Subir D’Lorgia Orienta v3 a GitHub / Render
+# Subir D’Lorgia Orienta v3.4 a GitHub / Render
 
 1. Haz una copia del repositorio actual por seguridad.
 2. Conserva la carpeta `.git` del repositorio local.
@@ -14,7 +14,7 @@ npm test
 
 ```bash
 git add .
-git commit -m "feat: D'Lorgia Orienta v3 con asesor personalizado y seguimiento"
+git commit -m "feat: D'Lorgia Orienta v3.4 con Orientador Personal"
 git push
 ```
 
@@ -23,8 +23,10 @@ git push
    - `/health`
    - `/api/status`
    - `/app`
-   - Tratamientos → Limpieza facial → Orientador → Resumen
-   - Asesor → “¿Qué cuidados generales debo conocer?”
+   - Orientador Personal → completar perfil → revisar 3 caminos
+   - Tratamientos → comprobar badges de afinidad → abrir detalle
+   - Detalle → Orientar expectativas → Resumen
+   - Asesor → comprobar contexto del Orientador → “¿Qué cuidados generales debo conocer?”
    - Seguimiento → crear alarma
    - Mi espacio → revisar historial y alarma
 

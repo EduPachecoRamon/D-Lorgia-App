@@ -1,3 +1,19 @@
+# v3.4.0 — Orientador Personal integrado
+
+- Añade Orientador Personal como módulo de primer nivel sin reemplazar Asesor ni Expectativas.
+- Añade estilos de acompañamiento Clara, Alma y Nexo; cambian la forma de explicar, no la lógica.
+- Flujo guiado: área, objetivo, prioridades, recuperación, intensidad, sensibilidad y opción a comparar.
+- Motor de afinidad explicable sobre el catálogo existente; no emite diagnóstico ni recomendación clínica.
+- Inicio muestra entrada y resumen del Orientador.
+- Tratamientos y Detalle muestran coincidencias y razones.
+- Expectativas y Evaluación heredan contexto del Orientador.
+- Asesor recibe perfil, prioridades y caminos como contexto adicional.
+- Seguimiento incorpora Orientador Personal al timeline.
+- Mi espacio guarda el perfil por cuenta.
+- API nueva `POST /api/personal-guide`.
+- Assets versionados `app-v340.js` y `styles-v340.css`; cache PWA v3.4.
+- 24/24 pruebas aprobadas.
+
 # v3.3.1 — Hotfix de layout y caché
 
 - Evita mezcla de HTML nuevo con CSS/JS viejos.

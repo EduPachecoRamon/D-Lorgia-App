@@ -1,9 +1,9 @@
 {
   "name": "dlorgia-whatsapp-bot",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "private": true,
   "type": "module",
-  "description": "D'Lorgia Orienta v3.3.1: hotfix de layout, cache busting de assets y fondos animados detrás de la interfaz.",
+  "description": "D'Lorgia Orienta v3.4: Orientador Personal guiado, afinidad explicable e integración con todo el recorrido.",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
