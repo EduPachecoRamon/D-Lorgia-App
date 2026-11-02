@@ -27,3 +27,11 @@ test('orientador incorpora una opción que el usuario desea comparar sin convert
   assert.ok(focused.matches[0].reasons.some((item) => /querías comparar/i.test(item)));
   assert.match(focused.disclaimer, /no es diagnóstico/i);
 });
+
+
+test('orientador puede usar un catálogo activo provisto por la base de datos', () => {
+  const custom = [{ id:'db-only', category:'Piel', name:'Tratamiento administrado', short:'BD', goals:['textura'], recovery:'Recuperación general' }];
+  const result = buildPersonalGuide({ area:'Piel', goal:'textura', treatmentId:'db-only' }, custom);
+  assert.equal(result.matches[0].id, 'db-only');
+  assert.equal(result.matches.length, 1);
+});

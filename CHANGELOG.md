@@ -1,3 +1,16 @@
+# v4.0 — Admin + Auth + PostgreSQL
+
+- Supabase Auth multi-dispositivo con fallback local.
+- PostgreSQL para perfiles, Orientador Personal, citas y tratamientos.
+- Roles patient/admin validados en backend.
+- Panel administrativo `/admin`.
+- Catálogo dinámico conectado al Orientador.
+- Agenda persistente con bloqueo de doble reserva.
+- Estados de cita administrables y sincronizados al paciente.
+- RLS y grants por columna.
+- Assets versionados v400 para evitar mezcla de caché.
+- 33/33 pruebas.
+
 # v3.4.0 — Orientador Personal integrado
 
 - Añade Orientador Personal como módulo de primer nivel sin reemplazar Asesor ni Expectativas.

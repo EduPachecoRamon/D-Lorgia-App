@@ -1,93 +1,74 @@
-# D’Lorgia Orienta v3.4 — ORIENTADOR PERSONAL — App de orientación y acompañamiento
+# D’Lorgia Orienta v4.0 — Admin + Base de datos
 
-Prototipo académico móvil centrado en una idea simple: **ayudar al paciente a comprender un tratamiento, organizar sus expectativas y continuar hacia una evaluación profesional sin convertir la IA en un médico virtual.**
+Aplicación de orientación y acompañamiento para D’Lorgia. La v4 mantiene el diseño, Orientador Personal, Asesor, agenda, seguimiento, animaciones y resiliencia anteriores, pero añade una arquitectura real de cuentas y persistencia.
 
-## Módulos de la app
-- **Orientador Personal:** recorrido guiado para quien aún no sabe qué camino explorar. Construye un perfil de preferencias y ordena tres opciones del catálogo por afinidad explicable; no diagnostica ni prescribe.
-- **Acceso y cuentas:** registro, login, recuperación local, sesión persistente opcional y datos separados por cuenta en el navegador.
-- **Inicio:** muestra continuidad y accesos rápidos según el recorrido del usuario.
-- **Tratamientos:** catálogo por categorías y detalle de cada opción.
-- **Orientador de expectativas:** evolución de la idea “Calculadora Digital de Expectativas Reales”. Organiza resultados referenciales, recuperación, sesiones a confirmar y cuidados.
-- **Asesor personalizado:** usa el tratamiento, objetivo y etapa actual como contexto. Explica y orienta; no diagnostica, prescribe ni garantiza resultados.
-- **Seguimiento y alarmas:** permite crear recordatorios locales, marcarlos como completados y activar notificaciones del navegador; el progreso cambia según acciones reales.
-- **Fondos vivos:** motivos SVG grandes por sección descienden en loop, respetando el lenguaje visual del Figma y `prefers-reduced-motion`.
-- **Mi espacio:** perfil, historial, tratamientos guardados, alarmas activas y descarga del último resumen.
-- **Evaluación profesional:** prepara el siguiente paso y permite continuar con el equipo por WhatsApp.
+## Novedades v4
 
-## Resiliencia del asesor
-El asesor tiene tres niveles:
-1. **Gemini**, si `GEMINI_API_KEY` está configurada y responde correctamente.
-2. **Respaldo local**, si Gemini no está configurado, falla por red, cuota o modelo.
-3. **Reglas de seguridad**, para consultas de diagnóstico, medicación o señales preocupantes.
+- **Supabase Auth** para cuentas multi-dispositivo.
+- **PostgreSQL** para perfiles, tratamientos, Orientador y citas.
+- **Roles `patient/admin`** validados en servidor.
+- **Panel `/admin`** para usuarios, citas y catálogo.
+- **Agenda persistente**: los horarios activos se bloquean en PostgreSQL.
+- **Catálogo administrable**: cambios del Admin alimentan Tratamientos y el Orientador Personal.
+- **Estado de cita real**: `pending`, `confirmed`, `completed`, `cancelled`.
+- **RLS + grants por columna** para evitar escalamiento de rol o confirmaciones desde una cuenta paciente.
+- **Modo degradado**: sin Supabase la app conserva el funcionamiento local del prototipo.
 
-La app nunca debería quedar inutilizada únicamente porque falle la IA externa.
+## Arquitectura
+
+```text
+Paciente / Admin
+       ↓
+D’Lorgia UI
+       ↓
+Node.js en Render
+  ├─ Supabase Auth
+  ├─ PostgreSQL
+  ├─ Orientador Personal
+  ├─ Gemini + fallback
+  └─ WhatsApp
+```
 
 ## Ejecutar localmente
-Requiere Node.js 20+.
 
 ```bash
-cp .env.example .env
 npm test
 npm start
 ```
 
-Abre:
+- App: `http://localhost:3000/app`
+- Admin: `http://localhost:3000/admin`
+- Health: `http://localhost:3000/health`
 
-```text
-http://localhost:3000/app
-```
+Sin variables Supabase funciona en modo demo local.
 
-## Variables principales en Render
-No subas `.env` a GitHub. Las credenciales deben permanecer en Render.
+## Configurar la base de datos
+
+Lee **`CONFIGURAR_SUPABASE_V4.md`**.
+
+Archivos importantes:
+
+- `supabase/schema.sql`
+- `src/services/supabase.js`
+- `src/services/accounts.js`
+- `public/admin.html`
+- `public/assets/admin-v400.js`
+- `public/assets/app-v400.js`
+
+## Variables principales
 
 ```env
-PORT=3000
-GEMINI_API_KEY=...
-GEMINI_MODEL=...
-PUBLIC_BOT_NUMBER=...
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+DLORGIA_ADMIN_EMAILS=
+GEMINI_API_KEY=
 ```
 
-Las variables de Meta/WhatsApp pueden conservarse para una integración posterior, pero la v3 está diseñada para que **la app funcione por sí misma**.
-
-## Endpoints principales
-- `GET /app` — aplicación.
-- `GET /health` — health check.
-- `GET /api/status` — estado de módulos.
-- `GET /api/catalog` — catálogo y objetivos.
-- `POST /api/orientation` — orientación de expectativas.
-- `POST /api/personal-guide` — construye perfil y caminos del Orientador Personal.
-- `POST /api/assistant` — asesor con Gemini + fallback local.
-- `POST /api/evaluation` — prepara la solicitud de evaluación.
-
-## Persistencia del prototipo
-Perfil, historial, tratamientos guardados, recordatorios y última orientación usan `localStorage`. No se deben introducir datos clínicos sensibles. En producción correspondería usar autenticación, base de datos, consentimiento, control de acceso y notificaciones push.
+La clave secreta nunca debe salir de Render/servidor.
 
 ## Pruebas
 
-```bash
-npm test
-```
+Construcción actual: **33/33**.
 
-La versión v3.4 incluye pruebas del Orientador Personal, autenticación, reglas del Asesor, fallback local, agenda, reservas y rutas existentes. Estado actual: **24/24 pruebas aprobadas**.
-
-
-## Novedades v3.1–v3.2
-- Onboarding personalizado con sede, interés y prioridad.
-- Memoria contextual local del asesor basada en preferencias y últimas frases del usuario.
-- Agenda funcional por sede/fecha con cupos y pre-reserva.
-- Recordatorio automático al reservar.
-- Animaciones y microinteracciones.
-- **Mi Plan** dinámico con progreso de recorrido.
-- Memoria visible del asesor mediante chips de contexto.
-- **PWA instalable** con manifest, service worker y caché básico/offline.
-
-> Nota: la agenda del prototipo guarda reservas en memoria del servidor. Para persistencia multiusuario real se requiere base de datos.
-
-## Nota sobre autenticación
-El registro/login de v3.3 es **funcional para el prototipo en un mismo navegador**. Las claves se derivan con PBKDF2 + SHA-256 y salt aleatorio; no se guarda la clave en texto plano. Para una versión de producción multi-dispositivo, sustituye esta capa por Firebase Auth, Supabase Auth, Auth0 u otro proveedor de identidad con recuperación verificada.
-
-
-## Orientador Personal v3.4
-El Orientador Personal conecta las páginas que ya existían en la app. Usa datos del onboarding como punto de partida, genera un perfil guardado por cuenta y lo reutiliza en Tratamientos, Detalle, Expectativas, Asesor, Evaluación, Seguimiento y Mi espacio. Los perfiles Clara, Alma y Nexo solo modifican el estilo de acompañamiento; el motor de afinidad y las reglas de seguridad son los mismos.
-
-Consulta `docs/V3_4_ORIENTADOR_PERSONAL.md` para la arquitectura completa.
+Consulta `PRUEBA_TOTAL_V4.md` para el checklist conectado a Supabase.

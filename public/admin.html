@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#1f5548" />
+  <title>D’Lorgia Admin</title>
+  <link rel="stylesheet" href="/assets/admin-v400.css" />
+</head>
+<body>
+  <div class="admin-shell">
+    <header class="admin-topbar">
+      <div class="admin-brand"><span class="mark">DL</span><span><small>D’LORGIA</small><strong>Admin</strong></span></div>
+      <div class="admin-session hidden" id="admin-session"><span id="admin-user"></span><button id="admin-logout">Cerrar sesión</button></div>
+    </header>
+
+    <main>
+      <section class="login-panel" id="admin-login-panel">
+        <div class="login-copy"><span class="eyebrow">ACCESO ADMINISTRATIVO</span><h1>Controla el recorrido sin perder de vista al paciente.</h1><p>La cuenta debe tener el rol <b>admin</b> en PostgreSQL. Las credenciales se validan con Supabase Auth.</p></div>
+        <form id="admin-login-form" class="admin-card form-grid">
+          <label>Correo o usuario<input id="admin-login-user" autocomplete="username" required /></label>
+          <label>Clave<input id="admin-login-password" type="password" autocomplete="current-password" required /></label>
+          <button class="primary" type="submit">Ingresar al panel</button>
+          <p class="feedback" id="admin-login-feedback"></p>
+          <a href="/app" class="text-link">← Volver a la app</a>
+        </form>
+      </section>
+
+      <section class="dashboard hidden" id="admin-dashboard">
+        <div class="dashboard-head"><div><span class="eyebrow">PANEL DE CONTROL</span><h1>Operación D’Lorgia</h1><p id="db-state">Conectando con PostgreSQL…</p></div><button class="secondary" id="refresh-admin">Actualizar</button></div>
+
+        <div class="stats" id="admin-stats">
+          <article><small>USUARIOS</small><strong>—</strong></article><article><small>ORIENTADORES</small><strong>—</strong></article><article><small>CITAS</small><strong>—</strong></article><article><small>PENDIENTES</small><strong>—</strong></article>
+        </div>
+
+        <nav class="admin-tabs">
+          <button class="active" data-admin-tab="appointments">Citas</button>
+          <button data-admin-tab="users">Usuarios</button>
+          <button data-admin-tab="treatments">Tratamientos</button>
+        </nav>
+
+        <section class="admin-section active" data-admin-panel="appointments">
+          <div class="section-head"><div><span class="eyebrow">AGENDA</span><h2>Solicitudes y estados</h2></div><span class="pill">Paciente ↔ Admin</span></div>
+          <div id="appointments-table" class="table-wrap"></div>
+        </section>
+
+        <section class="admin-section" data-admin-panel="users">
+          <div class="section-head"><div><span class="eyebrow">CUENTAS</span><h2>Usuarios registrados</h2></div></div>
+          <div id="users-table" class="table-wrap"></div>
+        </section>
+
+        <section class="admin-section" data-admin-panel="treatments">
+          <div class="section-head"><div><span class="eyebrow">CATÁLOGO</span><h2>Tratamientos publicados</h2></div><button class="secondary" id="seed-treatments">Cargar catálogo base</button></div>
+          <form id="treatment-form" class="admin-card treatment-form">
+            <input id="t-id" placeholder="ID: limpieza-premium" required />
+            <input id="t-name" placeholder="Nombre" required />
+            <input id="t-category" placeholder="Categoría" required />
+            <input id="t-short" placeholder="Descripción corta" />
+            <input id="t-objective" placeholder="Objetivo general" />
+            <input id="t-goals" placeholder="Metas: textura,cuidado" />
+            <input id="t-recovery" placeholder="Recuperación general" />
+            <select id="t-intensity"><option value="">Intensidad general</option><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option></select>
+            <button class="primary" type="submit">Guardar tratamiento</button>
+          </form>
+          <div id="treatments-table" class="table-wrap"></div>
+        </section>
+      </section>
+    </main>
+
+    <div class="admin-toast" id="admin-toast"></div>
+  </div>
+  <script type="module" src="/assets/admin-v400.js"></script>
+</body>
+</html>

@@ -111,7 +111,7 @@ function scoreTreatment(treatment, input) {
   return clamp(score, 0, 100);
 }
 
-function normalizeInput(input = {}) {
+function normalizeInput(input = {}, catalog = orientationCatalog) {
   const style = GUIDE_STYLES[input.guideStyle] ? input.guideStyle : 'alma';
   const area = Object.hasOwn(AREA_LABELS, input.area) ? input.area : 'Todas';
   const validGoal = orientationGoals.some((x) => x.id === input.goal) ? input.goal : 'cuidado';
@@ -125,14 +125,16 @@ function normalizeInput(input = {}) {
     recovery: ['sin_pausa', 'corta', 'flexible'].includes(input.recovery) ? input.recovery : 'flexible',
     intensity: ['minima', 'intermedia', 'abierta'].includes(input.intensity) ? input.intensity : 'abierta',
     sensitivity: ['no_indicado', 'normal', 'sensible'].includes(input.sensitivity) ? input.sensitivity : 'no_indicado',
-    treatmentId: orientationCatalog.some((x) => x.id === input.treatmentId) ? input.treatmentId : ''
+    treatmentId: catalog.some((x) => x.id === input.treatmentId) ? input.treatmentId : ''
   };
 }
 
-export function buildPersonalGuide(input = {}) {
-  const normalized = normalizeInput(input);
+export function buildPersonalGuide(input = {}, catalog = orientationCatalog) {
+  const sourceCatalog = Array.isArray(catalog) && catalog.length ? catalog : orientationCatalog;
+  const normalized = normalizeInput(input, sourceCatalog);
   const guide = GUIDE_STYLES[normalized.guideStyle];
-  const ranked = orientationCatalog
+  const ranked = sourceCatalog
+    .filter((treatment) => treatment && treatment.id && treatment.name)
     .map((treatment) => ({ treatment, score: scoreTreatment(treatment, normalized) }))
     .sort((a, b) => b.score - a.score || a.treatment.name.localeCompare(b.treatment.name, 'es'))
     .slice(0, 3)

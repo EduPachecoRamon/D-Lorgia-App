@@ -1,9 +1,9 @@
 {
   "name": "dlorgia-whatsapp-bot",
-  "version": "3.4.0",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
-  "description": "D'Lorgia Orienta v3.4: Orientador Personal guiado, afinidad explicable e integración con todo el recorrido.",
+  "description": "D'Lorgia Orienta v4.0: experiencia resiliente, contexto unificado del usuario, personalización del Asesor y Orientador Personal integrado.",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",

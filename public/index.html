@@ -10,14 +10,14 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/assets/icons/icon-192.png" />
   <title>D’Lorgia Orienta</title>
-  <style id="critical-v340">
+  <style id="critical-v400">
     /* Critical guard: evita mezclar HTML nuevo con estilos viejos durante una actualización. */
     .ambient-layer{display:none}
     .auth-form{display:none}
     .auth-form.active{display:block}
     .auth-success-layer{display:none}
   </style>
-  <link rel="stylesheet" href="/assets/styles-v340.css" />
+  <link rel="stylesheet" href="/assets/styles-v400.css" />
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true" focusable="false">
@@ -57,7 +57,7 @@
       <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.1 5.5-5.5 2.1 2.1-5.5Z"/><circle cx="12" cy="12" r="1"/></symbol>
     </defs>
   </svg>
-  <div id="network-banner" class="network-banner hidden">Sin conexión · usando modo local</div>
+  <div id="network-banner" class="network-banner hidden">Sin conexión · tu perfil, historial y navegación local siguen disponibles</div>
   <div id="app-toast" class="app-toast" role="status" aria-live="polite"></div>
   <div class="app-shell entry-mode">
   <div class="ambient-layer" id="ambient-layer" data-scene="login" aria-hidden="true">
@@ -85,6 +85,7 @@
       <button class="ghost compact" data-nav="portal">Mi espacio</button>
     </header>
 
+    <div id="experience-status" class="experience-status hidden" aria-live="polite"></div>
     <main>
       <section class="screen active" id="login" data-icon="✦" data-icon2="◇">
         <div class="login-wrap">
@@ -138,13 +139,13 @@
             <form id="reset-form" class="auth-form" data-auth-panel="reset">
               <div class="login-card-head">
                 <span class="icon-tile"><svg class="ui-icon"><use href="#i-key"/></svg></span>
-                <span><small>RECUPERACIÓN LOCAL</small><b>Restablece tu acceso</b></span>
+                <span><small>RECUPERACIÓN DE ACCESO</small><b>Restablece tu acceso</b></span>
               </div>
               <div id="reset-feedback" class="auth-feedback" aria-live="polite"></div>
-              <p class="auth-help">Busca una cuenta guardada en este navegador y crea una nueva clave. En producción esto se validaría por correo u OTP.</p>
+              <p class="auth-help">Si la base de datos está conectada, la recuperación se valida por correo. En modo demo funciona localmente.</p>
               <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-mail"/></svg></span><input id="reset-user" autocomplete="username" placeholder="Correo o usuario" required /></label>
-              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-key"/></svg></span><input id="reset-password" type="password" autocomplete="new-password" placeholder="Nueva clave" minlength="8" required /><button class="field-action" data-toggle-password="#reset-password" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
-              <label class="field-with-icon"><span><svg class="ui-icon"><use href="#i-circle-check"/></svg></span><input id="reset-confirm" type="password" autocomplete="new-password" placeholder="Repite la nueva clave" minlength="8" required /></label>
+              <label class="field-with-icon" id="reset-password-field"><span><svg class="ui-icon"><use href="#i-key"/></svg></span><input id="reset-password" type="password" autocomplete="new-password" placeholder="Nueva clave" minlength="8" required /><button class="field-action" data-toggle-password="#reset-password" type="button" aria-label="Mostrar u ocultar clave"><svg class="ui-icon"><use href="#i-eye"/></svg></button></label>
+              <label class="field-with-icon" id="reset-confirm-field"><span><svg class="ui-icon"><use href="#i-circle-check"/></svg></span><input id="reset-confirm" type="password" autocomplete="new-password" placeholder="Repite la nueva clave" minlength="8" required /></label>
               <button class="primary full auth-submit" type="submit"><span>Guardar nueva clave</span><svg class="ui-icon"><use href="#i-circle-check"/></svg></button>
               <button class="ghost full auth-link-back" type="button" data-auth-mode="login">Volver al ingreso</button>
             </form>
@@ -410,7 +411,10 @@
           <div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-user"/></svg></span><div><p class="eyebrow">PERFIL</p><h3>Personaliza tu experiencia</h3></div></div>
           <label>Nombre o alias<input id="profile-name" placeholder="Tu nombre" maxlength="60" /></label>
           <label>Sede preferida<select id="profile-branch"><option value="huancayo">Huancayo</option><option value="piura">Piura</option><option value="pucallpa">Pucallpa</option></select></label>
-          <button class="primary" type="submit">Guardar perfil</button>
+          <label>Cómo prefieres las respuestas<select id="profile-communication"><option value="breve">Breves y directas</option><option value="equilibrada">Equilibradas</option><option value="detallada">Detalladas y explicadas</option></select></label>
+          <label>Cómo quieres que te acompañe<select id="profile-support"><option value="guiado">Guíame paso a paso</option><option value="comparativo">Ayúdame a comparar opciones</option><option value="autonomo">Dame información y yo decido</option></select></label>
+          <p class="microcopy profile-ai-note">Estas preferencias cambian cómo el Asesor organiza y prioriza la explicación; no cambian los límites de seguridad ni sustituyen la evaluación profesional.</p>
+          <button class="primary" type="submit">Guardar perfil y personalización</button>
         </form>
 
         <div class="panel guide-portal-panel"><div class="panel-title"><span class="panel-icon"><svg class="ui-icon"><use href="#i-compass"/></svg></span><div><p class="eyebrow">ORIENTADOR PERSONAL</p><h3>Tu perfil de orientación</h3></div></div><div id="portal-guide-summary"></div><button class="secondary full" data-nav="guide">Abrir Orientador Personal</button></div>
@@ -423,6 +427,13 @@
       </section>
     </main>
 
+    <aside id="recovery-center" class="recovery-center hidden" aria-live="assertive">
+      <button id="recovery-close" class="recovery-close" type="button" aria-label="Cerrar">×</button>
+      <div class="recovery-icon"><svg class="ui-icon"><use href="#i-shield"/></svg></div>
+      <div><small>RECUPERACIÓN SEGURA</small><b>La app puede continuar</b><p id="recovery-message">Tu progreso local sigue disponible.</p></div>
+      <div class="recovery-actions"><button id="recovery-retry" class="primary" type="button">Reintentar</button><button id="recovery-home" class="secondary" type="button">Ir a Inicio</button></div>
+    </aside>
+
     <nav class="bottom-nav" aria-label="Navegación principal">
       <button data-nav="home"><b><svg class="ui-icon"><use href="#i-home"/></svg></b><span>Inicio</span></button>
       <button data-nav="catalog"><b><svg class="ui-icon"><use href="#i-scan"/></svg></b><span>Tratamientos</span></button>
@@ -431,6 +442,6 @@
       <button data-nav="portal"><b><svg class="ui-icon"><use href="#i-user"/></svg></b><span>Mi espacio</span></button>
     </nav>
   </div>
-  <script type="module" src="/assets/app-v340.js"></script>
+  <script type="module" src="/assets/app-v400.js"></script>
 </body>
 </html>

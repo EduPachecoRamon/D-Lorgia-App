@@ -1,34 +1,37 @@
-# Subir D’Lorgia Orienta v3.4 a GitHub / Render
+# Subir D’Lorgia Orienta v4.0 a GitHub / Render
 
-1. Haz una copia del repositorio actual por seguridad.
-2. Conserva la carpeta `.git` del repositorio local.
-3. Reemplaza el contenido del repositorio con el contenido de esta carpeta.
-4. **No subas `.env`**. Las claves siguen en Render.
-5. Ejecuta:
+## Código
 
-```bash
+Copia TODO el contenido de este proyecto sobre tu repo local `D-Lorgia-App`, conservando `.git` y cualquier `.env` local.
+
+```powershell
 npm test
-```
-
-6. Si pasa, sube:
-
-```bash
-git add .
-git commit -m "feat: D'Lorgia Orienta v3.4 con Orientador Personal"
+git status
+git add -A
+git commit -m "feat: D'Lorgia Orienta v4 admin y base de datos"
 git push
 ```
 
-7. Espera a que Render redepliegue.
-8. Prueba en este orden:
-   - `/health`
-   - `/api/status`
-   - `/app`
-   - Orientador Personal → completar perfil → revisar 3 caminos
-   - Tratamientos → comprobar badges de afinidad → abrir detalle
-   - Detalle → Orientar expectativas → Resumen
-   - Asesor → comprobar contexto del Orientador → “¿Qué cuidados generales debo conocer?”
-   - Seguimiento → crear alarma
-   - Mi espacio → revisar historial y alarma
+## Después del deploy
 
-### Qué debe ocurrir si Gemini falla
-El asesor debe responder usando el respaldo local. No debe mostrar al paciente “IA no configurada”.
+Sin Supabase configurado, la app seguirá en modo demo local.
+
+Para activar v4 completa:
+
+1. Crear proyecto Supabase.
+2. Ejecutar `supabase/schema.sql`.
+3. Añadir variables de `CONFIGURAR_SUPABASE_V4.md` en Render.
+4. Redeploy.
+5. Registrar el correo definido en `DLORGIA_ADMIN_EMAILS`.
+6. Entrar a `/admin`.
+7. Pulsar **Cargar catálogo base**.
+
+## Verificar
+
+- `/health`
+- `/api/status`
+- `/api/auth/status`
+- `/app`
+- `/admin`
+
+No subas ninguna clave secreta a GitHub.

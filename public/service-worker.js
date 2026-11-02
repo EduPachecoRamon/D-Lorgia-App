@@ -1,8 +1,8 @@
-const CACHE = 'dlorgia-orienta-v340-personal-guide';
+const CACHE = 'dlorgia-orienta-v400-admin-database';
 const CORE = [
   '/app', '/',
-  '/assets/styles-v340.css',
-  '/assets/app-v340.js',
+  '/assets/styles-v400.css',
+  '/assets/app-v400.js',
   '/manifest.webmanifest'
 ];
 

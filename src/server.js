@@ -13,6 +13,8 @@ import { calculateOrientation } from './services/calculator.js';
 import { buildPersonalGuide } from './services/personal-guide.js';
 import { branches } from './data/knowledge.js';
 import { getSchedule, reserveSlot, getSchedulingInfo } from './services/scheduling.js';
+import { authState, registerRemote, loginRemote, refreshRemote, recoverRemote, currentUser, requireAdmin, updateProfile, stateForUser, adminOverview } from './services/accounts.js';
+import { getSupabaseState, dbSelect, dbInsert, dbUpdate, eq } from './services/supabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, '../public');
@@ -98,7 +100,7 @@ const mime = {
 };
 
 async function serveStatic(res, pathname) {
-  const requested = pathname === '/' || pathname === '/app' ? '/index.html' : pathname;
+  const requested = pathname === '/' || pathname === '/app' ? '/index.html' : pathname === '/admin' ? '/admin.html' : pathname;
   const safePath = path.normalize(requested).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.resolve(publicDir, `.${safePath}`);
   if (!filePath.startsWith(publicDir)) return false;
@@ -136,30 +138,317 @@ function buildEvaluation({ name, contact, branch, interest, date, time }) {
   };
 }
 
+
+function catalogRow(item, sortOrder = 0) {
+  return {
+    id: item.id,
+    category: item.category,
+    name: item.name,
+    short: item.short || '',
+    description: item.description || '',
+    objective: item.objective || '',
+    goals: item.goals || [],
+    recovery: item.recovery || '',
+    intensity: item.intensity || '',
+    active: true,
+    sort_order: sortOrder,
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function databaseCatalog() {
+  if (!getSupabaseState().databaseConfigured) return [];
+  try {
+    return await dbSelect('treatments', 'select=*&active=eq.true&order=sort_order.asc,name.asc');
+  } catch (error) {
+    console.warn('[DATABASE CATALOG FALLBACK]', error.message);
+    return [];
+  }
+}
+
+async function scheduleWithDatabase(branch, date) {
+  const base = getSchedule(branch, date);
+  if (!getSupabaseState().databaseConfigured || base.closed || !base.slots?.length) return base;
+  try {
+    const rows = await dbSelect('appointments', `select=time,status&branch=eq.${encodeURIComponent(branch)}&date=eq.${encodeURIComponent(date)}&status=in.(pending,confirmed)`);
+    const occupied = new Set((rows || []).map((row) => row.time));
+    return { ...base, slots: base.slots.map((slot) => occupied.has(slot.time) ? { ...slot, available:false, databaseOccupied:true } : slot), persistence:'postgresql' };
+  } catch (error) {
+    console.warn('[DATABASE SCHEDULE FALLBACK]', error.message);
+    return { ...base, persistence:'memory-fallback' };
+  }
+}
+
+async function reserveWithDatabase(req, body) {
+  const state = getSupabaseState();
+  const auth = state.databaseConfigured ? await currentUser(req, { optional:true }) : null;
+  if (!state.databaseConfigured || !auth) return { reservation: reserveSlot(body), databaseAppointment:null };
+
+  const branch = body.branch || 'huancayo';
+  const schedule = await scheduleWithDatabase(branch, body.date);
+  const slot = schedule.slots?.find((item) => item.time === body.time);
+  if (!slot) { const error = new Error('Ese horario no pertenece a la agenda de la sede.'); error.status = 400; throw error; }
+  if (!slot.available) { const error = new Error('Ese horario ya no está disponible. Elige otro.'); error.status = 409; throw error; }
+  const reference = `DL-${Date.now().toString(36).toUpperCase()}`;
+  try {
+    const rows = await dbInsert('appointments', {
+      user_id: auth.user.id,
+      treatment_id: body.treatmentId || null,
+      branch,
+      interest: String(body.interest || 'Orientación general').trim().slice(0, 140),
+      date: body.date || null,
+      time: body.time || null,
+      contact: String(body.contact || '').trim().slice(0, 120),
+      status: 'pending',
+      external_reference: reference,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+    const appointment = rows?.[0];
+    return {
+      reservation: {
+        id: reference, branch, branchName: schedule.branchName, date: body.date, time: body.time,
+        name: String(body.name || '').trim().slice(0,80), contact: String(body.contact || '').trim().slice(0,120),
+        interest: String(body.interest || 'Orientación general').trim().slice(0,120), status:'pending', createdAt:new Date().toISOString()
+      },
+      databaseAppointment: appointment || null
+    };
+  } catch (error) {
+    if (/duplicate key|unique constraint|23505/i.test(String(error.message || '') + JSON.stringify(error.payload || {}))) {
+      const conflict = new Error('Ese horario acaba de ser reservado por otra persona. Elige otro.'); conflict.status = 409; throw conflict;
+    }
+    throw error;
+  }
+}
+
+function normalizeDatabaseTreatment(item) {
+  return {
+    id: item.id,
+    category: item.category,
+    name: item.name,
+    short: item.short || '',
+    description: item.description || '',
+    objective: item.objective || '',
+    goals: Array.isArray(item.goals) ? item.goals : [],
+    recovery: item.recovery || '',
+    intensity: item.intensity || ''
+  };
+}
+
+async function persistGuideIfAuthenticated(req, body, result) {
+  if (!getSupabaseState().databaseConfigured) return null;
+  const auth = await currentUser(req, { optional: true });
+  if (!auth) return null;
+  const rows = await dbInsert('personal_guides', {
+    user_id: auth.user.id,
+    payload: body,
+    result,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
+  return rows?.[0] || null;
+}
+
+async function persistAppointmentIfAuthenticated(req, payload, reservation) {
+  if (!getSupabaseState().databaseConfigured) return null;
+  const auth = await currentUser(req, { optional: true });
+  if (!auth) return null;
+  const rows = await dbInsert('appointments', {
+    user_id: auth.user.id,
+    treatment_id: payload.treatmentId || null,
+    branch: payload.branch || 'huancayo',
+    interest: String(payload.interest || 'Orientación general').slice(0, 140),
+    date: payload.date || null,
+    time: payload.time || null,
+    contact: String(payload.contact || '').slice(0, 120),
+    status: 'pending',
+    external_reference: reservation?.id || null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
+  return rows?.[0] || null;
+}
+
+function publicSession(session = {}) {
+  return {
+    access_token: session.access_token || '',
+    refresh_token: session.refresh_token || '',
+    expires_in: session.expires_in || null,
+    expires_at: session.expires_at || null,
+    token_type: session.token_type || 'bearer'
+  };
+}
+
+function serializeAuthError(error) {
+  const status = Number(error?.status || 400);
+  const raw = String(error?.message || 'No se pudo completar la autenticación.');
+  if (/invalid login credentials/i.test(raw)) return { status: 401, message: 'Correo/usuario o clave incorrectos.' };
+  if (/email not confirmed/i.test(raw)) return { status: 403, message: 'Confirma tu correo antes de ingresar.' };
+  if (/already registered|already been registered/i.test(raw)) return { status: 409, message: 'Ese correo ya tiene una cuenta.' };
+  return { status, message: raw };
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
   // Web/app del prototipo final
-  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/app' || url.pathname.startsWith('/assets/'))) {
+  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/app' || url.pathname === '/admin' || url.pathname.startsWith('/assets/'))) {
     if (await serveStatic(res, url.pathname)) return;
   }
 
   if (req.method === 'GET' && url.pathname === '/api/status') {
     return json(res, 200, {
       service: "D'Lorgia Orienta",
-      version: '3.4.0',
+      version: '4.0.0',
       status: 'ok',
       whatsappConfigured: Boolean(config.accessToken && config.phoneNumberId),
       aiConfigured: getAIState().configured,
       aiProvider: getAIState().provider,
       aiModel: getAIState().model,
       assistantAvailable: true,
-      modules: ['tratamientos', 'orientación', 'asesor personalizado', 'agenda', 'seguimiento', 'alarmas', 'mi espacio', 'evaluación', 'registro local', 'sesión por cuenta', 'orientador personal'],
-      scheduling: getSchedulingInfo()
+      database: authState(),
+      modules: ['tratamientos', 'orientación', 'asesor personalizado', 'agenda', 'seguimiento', 'alarmas', 'mi espacio', 'evaluación', 'orientador personal', 'auth real', 'postgresql', 'panel admin'],
+      scheduling: { ...getSchedulingInfo(), persistence: authState().databaseConfigured ? 'postgresql' : 'memory-prototype' }
     });
   }
 
   if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true });
+
+
+  if (req.method === 'GET' && url.pathname === '/api/auth/status') {
+    return json(res, 200, authState());
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/auth/register') {
+    if (!authState().configured) return json(res, 503, { error: 'La autenticación remota todavía no está configurada.' });
+    try {
+      const body = await readJson(req);
+      const result = await registerRemote(body);
+      return json(res, 201, {
+        user: result.user ? { id: result.user.id, email: result.user.email } : null,
+        profile: result.profile,
+        session: result.session ? publicSession(result.session) : null,
+        needsEmailConfirmation: result.needsEmailConfirmation
+      });
+    } catch (error) {
+      const authError = serializeAuthError(error);
+      return json(res, authError.status, { error: authError.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/auth/login') {
+    if (!authState().configured) return json(res, 503, { error: 'La autenticación remota todavía no está configurada.' });
+    try {
+      const body = await readJson(req);
+      const result = await loginRemote(body);
+      return json(res, 200, {
+        user: { id: result.user.id, email: result.user.email },
+        profile: result.profile,
+        session: publicSession(result.session)
+      });
+    } catch (error) {
+      const authError = serializeAuthError(error);
+      return json(res, authError.status, { error: authError.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/auth/refresh') {
+    if (!authState().configured) return json(res, 503, { error: 'La autenticación remota todavía no está configurada.' });
+    try {
+      const body = await readJson(req);
+      const result = await refreshRemote(body.refresh_token);
+      return json(res, 200, { user: { id: result.user.id, email: result.user.email }, profile: result.profile, session: publicSession(result.session) });
+    } catch (error) {
+      const authError = serializeAuthError(error);
+      return json(res, authError.status, { error: authError.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/auth/password-reset') {
+    if (!authState().configured) return json(res, 503, { error: 'La autenticación remota todavía no está configurada.' });
+    try {
+      const body = await readJson(req);
+      await recoverRemote(body.email || body.identifier);
+      return json(res, 200, { ok: true, message: 'Si el correo existe, Supabase enviará las instrucciones de recuperación.' });
+    } catch (error) {
+      const authError = serializeAuthError(error);
+      return json(res, authError.status, { error: authError.message });
+    }
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/auth/me') {
+    try {
+      const auth = await currentUser(req);
+      return json(res, 200, { user: { id: auth.user.id, email: auth.user.email }, profile: auth.profile });
+    } catch (error) { return json(res, error.status || 401, { error: error.message }); }
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/me/state') {
+    try {
+      const auth = await currentUser(req);
+      return json(res, 200, await stateForUser(auth.user.id));
+    } catch (error) { return json(res, error.status || 401, { error: error.message }); }
+  }
+
+  if (req.method === 'PATCH' && url.pathname === '/api/profile') {
+    try {
+      const auth = await currentUser(req);
+      const body = await readJson(req);
+      const profile = await updateProfile(auth.user.id, body);
+      return json(res, 200, { profile });
+    } catch (error) { return json(res, error.status || 400, { error: error.message }); }
+  }
+
+  if (url.pathname.startsWith('/api/admin/')) {
+    if (!authState().configured) return json(res, 503, { error: 'Supabase todavía no está configurado.' });
+    try {
+      await requireAdmin(req);
+      if (req.method === 'GET' && url.pathname === '/api/admin/overview') return json(res, 200, await adminOverview());
+      if (req.method === 'GET' && url.pathname === '/api/admin/users') {
+        const rows = await dbSelect('profiles', 'select=id,email,username,name,role,branch,created_at,updated_at&order=created_at.desc&limit=200');
+        return json(res, 200, { items: rows });
+      }
+      if (req.method === 'GET' && url.pathname === '/api/admin/appointments') {
+        const [rows, profiles] = await Promise.all([
+          dbSelect('appointments', 'select=*&order=created_at.desc&limit=200'),
+          dbSelect('profiles', 'select=id,name,email,username')
+        ]);
+        const byId = new Map((profiles || []).map((profile) => [profile.id, profile]));
+        return json(res, 200, { items: (rows || []).map((item) => ({ ...item, patient: byId.get(item.user_id) || null })) });
+      }
+      if (req.method === 'GET' && url.pathname === '/api/admin/treatments') {
+        const rows = await dbSelect('treatments', 'select=*&order=sort_order.asc,name.asc');
+        return json(res, 200, { items: rows });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/admin/treatments/seed') {
+        const rows = await dbInsert('treatments', orientationCatalog.map(catalogRow), { upsert: true, onConflict: 'id' });
+        return json(res, 200, { items: rows, seeded: orientationCatalog.length });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/admin/treatments') {
+        const body = await readJson(req);
+        if (!body.id || !body.name || !body.category) return json(res, 400, { error: 'ID, nombre y categoría son obligatorios.' });
+        const rows = await dbInsert('treatments', { ...catalogRow(body), id: String(body.id).trim().slice(0,60), active: body.active !== false }, { upsert: true, onConflict: 'id' });
+        return json(res, 201, { item: rows?.[0] || null });
+      }
+      const appointmentMatch = url.pathname.match(/^\/api\/admin\/appointments\/([^/]+)$/);
+      if (req.method === 'PATCH' && appointmentMatch) {
+        const body = await readJson(req);
+        const allowed = new Set(['pending','confirmed','completed','cancelled']);
+        if (!allowed.has(body.status)) return json(res, 400, { error: 'Estado de cita inválido.' });
+        const rows = await dbUpdate('appointments', eq('id', appointmentMatch[1]), { status: body.status, updated_at: new Date().toISOString() });
+        return json(res, 200, { item: rows?.[0] || null });
+      }
+      const treatmentMatch = url.pathname.match(/^\/api\/admin\/treatments\/([^/]+)$/);
+      if (req.method === 'PATCH' && treatmentMatch) {
+        const body = await readJson(req);
+        const patch = { updated_at: new Date().toISOString() };
+        for (const key of ['name','category','short','description','objective','recovery','intensity','active','sort_order','goals']) if (body[key] !== undefined) patch[key] = body[key];
+        const rows = await dbUpdate('treatments', eq('id', treatmentMatch[1]), patch);
+        return json(res, 200, { item: rows?.[0] || null });
+      }
+      return json(res, 404, { error: 'Ruta administrativa no encontrada.' });
+    } catch (error) { return json(res, error.status || 400, { error: error.message }); }
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/config') {
     return json(res, 200, {
@@ -169,15 +458,15 @@ const server = http.createServer(async (req, res) => {
       aiConfigured: getAIState().configured,
       aiProvider: getAIState().provider,
       aiModel: getAIState().model,
-      assistantAvailable: true
+      assistantAvailable: true,
+      databaseConfigured: authState().configured
     });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/catalog') {
-    return json(res, 200, {
-      items: orientationCatalog.map(({ id, category, name, short, description, objective, goals }) => ({ id, category, name, short, description, objective, goals })),
-      goals: orientationGoals
-    });
+    const rows = await databaseCatalog();
+    const items = rows.length ? rows.map(normalizeDatabaseTreatment) : orientationCatalog.map(({ id, category, name, short, description, objective, goals, recovery }) => ({ id, category, name, short, description, objective, goals, recovery }));
+    return json(res, 200, { items, goals: orientationGoals, source: rows.length ? 'database' : 'bundled' });
   }
 
   if (req.method === 'POST' && url.pathname === '/api/orientation') {
@@ -192,7 +481,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/personal-guide') {
     try {
       const body = await readJson(req);
-      return json(res, 200, buildPersonalGuide(body));
+      const guideRows = await databaseCatalog();
+      const result = buildPersonalGuide(body, guideRows.length ? guideRows.map(normalizeDatabaseTreatment) : orientationCatalog);
+      const saved = await persistGuideIfAuthenticated(req, body, result).catch((error) => { console.warn('[GUIDE DATABASE]', error.message); return null; });
+      return json(res, 200, { ...result, persisted: Boolean(saved), databaseId: saved?.id || null });
     } catch (error) {
       console.error('[PERSONAL GUIDE ERROR]', error);
       return json(res, 400, { error: 'No se pudo construir el perfil de orientación.' });
@@ -220,7 +512,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/schedule') {
     const branch = url.searchParams.get('branch') || 'huancayo';
     const date = url.searchParams.get('date') || '';
-    return json(res, 200, getSchedule(branch, date));
+    return json(res, 200, await scheduleWithDatabase(branch, date));
   }
 
   if (req.method === 'POST' && url.pathname === '/api/reservations') {
@@ -229,8 +521,8 @@ const server = http.createServer(async (req, res) => {
       if (!String(body.name || '').trim() || !String(body.contact || '').trim()) {
         return json(res, 400, { error: 'Nombre y contacto son obligatorios.' });
       }
-      const reservation = reserveSlot(body);
-      return json(res, 201, { reservation });
+      const booking = await reserveWithDatabase(req, body);
+      return json(res, 201, booking);
     } catch (error) {
       return json(res, 409, { error: error.message });
     }
@@ -262,7 +554,10 @@ const server = http.createServer(async (req, res) => {
         'Seguimiento y alarmas locales del prototipo',
         'Mi espacio con perfil, historial, guardados, alarmas y documentos',
         'Continuidad por WhatsApp',
-        'Bot de WhatsApp Cloud API'
+        'Bot de WhatsApp Cloud API',
+        'Autenticación Supabase',
+        'PostgreSQL persistente',
+        'Panel administrativo con roles'
       ]
     });
   }

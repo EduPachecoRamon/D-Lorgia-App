@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
-const js = fs.readFileSync(path.join(root, 'public/assets/app-v340.js'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'public/assets/styles-v340.css'), 'utf8');
+const js = fs.readFileSync(path.join(root, 'public/assets/app-v400.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'public/assets/styles-v400.css'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'public/service-worker.js'), 'utf8');
 
 test('frontend incluye login, registro y recuperación local', () => {
@@ -33,18 +33,18 @@ test('fondos ambientales repiten motivos grandes y animados', () => {
   assert.match(js, /login: \{ primary: 'sparkles'/);
 });
 
-test('asesor incluye estado visual de consulta y cache v3.4', () => {
+test('asesor incluye estado visual de consulta y cache v4.0', () => {
   assert.match(js, /typing-dots/);
   assert.match(js, /is-thinking/);
   assert.match(css, /advisorBreath/);
-  assert.match(sw, /dlorgia-orienta-v340-personal-guide/);
+  assert.match(sw, /dlorgia-orienta-v400-admin-database/);
 });
 
 
-test('v3.4 mantiene el hotfix de layout y usa assets versionados', () => {
-  assert.match(html, /styles-v340\.css/);
-  assert.match(html, /app-v340\.js/);
-  assert.match(html, /critical-v340/);
+test('v4.0 mantiene el hotfix de layout y usa assets versionados', () => {
+  assert.match(html, /styles-v400\.css/);
+  assert.match(html, /app-v400\.js/);
+  assert.match(html, /critical-v400/);
   assert.match(css, /\.ambient-layer\{z-index:0!important\}/);
   assert.match(css, /\.auth-form\{display:none!important\}/);
   assert.match(css, /\.screen::before,.screen::after\{content:none!important/);
@@ -64,6 +64,32 @@ test('Orientador conecta Tratamientos, Asesor, Evaluación, Seguimiento y Mi esp
   assert.match(js, /guideMatchFor/);
   assert.match(js, /openGuideEvaluation/);
   assert.match(js, /portal-guide-summary/);
-  assert.match(js, /Orientador Personal - caminos para explorar/);
+  assert.match(js, /Caminos del Orientador/);
   assert.match(js, /Crear perfil del Orientador/);
+});
+
+
+test('v3.5 conserva progreso y ofrece recuperación contextual', () => {
+  assert.match(html, /id="experience-status"/);
+  assert.match(html, /id="recovery-center"/);
+  assert.match(js, /saveGuideDraft/);
+  assert.match(js, /setChatDraft/);
+  assert.match(js, /showRecovery/);
+  assert.match(js, /La respuesta tardó demasiado/);
+});
+
+test('v3.5 usa perfil y recorrido completo como contexto del Asesor', () => {
+  assert.match(html, /profile-communication/);
+  assert.match(html, /profile-support/);
+  assert.match(js, /experienceContext/);
+  assert.match(js, /Preferencia de comunicación/);
+  assert.match(js, /Forma de apoyo preferida/);
+  assert.match(js, /Próximos recordatorios/);
+});
+
+test('chat muestra etapas de preparación sin fingir razonamiento interno', () => {
+  assert.match(js, /Reuniendo tu perfil y preferencias/);
+  assert.match(js, /Consultando el servicio de respuesta/);
+  assert.match(js, /Preparando una respuesta segura y clara/);
+  assert.match(css, /thinking-note/);
 });
