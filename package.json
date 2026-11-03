@@ -1,9 +1,9 @@
 {
   "name": "dlorgia-whatsapp-bot",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "private": true,
   "type": "module",
-  "description": "D'Lorgia Orienta v4.1: dashboard administrativo premium sobre Supabase, PostgreSQL y Orientador Personal.",
+  "description": "D'Lorgia Orienta v4.2 Pulse: dashboard administrativo premium, journey analytics, calendario, alertas y auditoría sobre Supabase/PostgreSQL.",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",

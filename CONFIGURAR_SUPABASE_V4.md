@@ -116,3 +116,8 @@ Con Supabase correctamente configurado, `/api/auth/status` debe indicar:
   "databaseConfigured": true
 }
 ```
+
+
+## Actualización v4.2 Pulse
+
+Si tu base v4 ya existe, ejecuta `supabase/v4_2_migration.sql`. Añade únicamente la tabla `journey_events` para analytics/auditoría y no borra los datos existentes.

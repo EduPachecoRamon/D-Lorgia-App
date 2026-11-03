@@ -37,7 +37,7 @@ test('asesor incluye estado visual de consulta y cache v4.0', () => {
   assert.match(js, /typing-dots/);
   assert.match(js, /is-thinking/);
   assert.match(css, /advisorBreath/);
-  assert.match(sw, /dlorgia-orienta-v400-admin-database/);
+  assert.match(sw, /dlorgia-orienta-v420-pulse/);
 });
 
 

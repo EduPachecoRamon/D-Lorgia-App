@@ -67,6 +67,21 @@ create unique index if not exists appointments_active_slot_unique
   on public.appointments(branch, date, time)
   where status in ('pending','confirmed');
 
+
+-- v4.2 · eventos del journey y auditoría administrativa.
+create table if not exists public.journey_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  actor_id uuid references auth.users(id) on delete set null,
+  event_type text not null,
+  source text not null default 'system',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists journey_events_user_created_idx on public.journey_events(user_id, created_at desc);
+create index if not exists journey_events_type_created_idx on public.journey_events(event_type, created_at desc);
+create index if not exists journey_events_actor_created_idx on public.journey_events(actor_id, created_at desc);
+
 -- Mantener updated_at automáticamente.
 create or replace function public.set_updated_at()
 returns trigger
@@ -125,10 +140,13 @@ alter table public.profiles enable row level security;
 alter table public.treatments enable row level security;
 alter table public.personal_guides enable row level security;
 alter table public.appointments enable row level security;
+alter table public.journey_events enable row level security;
 
 -- Grants mínimos: RLS filtra filas, grants define qué operaciones existen.
 revoke all on public.profiles, public.treatments, public.personal_guides, public.appointments from anon;
+revoke all on public.journey_events from anon;
 revoke all on public.profiles, public.treatments, public.personal_guides, public.appointments from authenticated;
+revoke all on public.journey_events from authenticated;
 -- El paciente puede leer su perfil, pero solo editar preferencias inocuas; nunca role/email/username.
 grant select on public.profiles to authenticated;
 grant update (name, branch, response_style, guidance_style) on public.profiles to authenticated;
@@ -142,6 +160,7 @@ grant select on public.appointments to authenticated;
 grant insert (user_id, treatment_id, branch, interest, date, time, contact, external_reference) on public.appointments to authenticated;
 -- El backend Admin usa la clave secreta -> service_role.
 grant all on public.profiles, public.treatments, public.personal_guides, public.appointments to service_role;
+grant all on public.journey_events to service_role;
 
 -- Re-crear políticas de forma idempotente.
 drop policy if exists "profiles_read_own" on public.profiles;

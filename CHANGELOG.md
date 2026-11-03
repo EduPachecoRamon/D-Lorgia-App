@@ -1,3 +1,13 @@
+# v4.2.0 — Pulse
+
+- Fondo ambiental del Admin inspirado en la app principal.
+- D’Lorgia Pulse, funnel y Live Journey Map.
+- Calendario administrativo, alertas e insights automáticos.
+- Centro de paciente ampliado.
+- Tracking opcional `journey_events` y auditoría administrativa persistente.
+- Nueva cache `dlorgia-orienta-v420-pulse`.
+- 38 pruebas automatizadas.
+
 # v4.0 — Admin + Auth + PostgreSQL
 
 - Supabase Auth multi-dispositivo con fallback local.

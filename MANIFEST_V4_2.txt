@@ -1,0 +1,16 @@
+D'Lorgia Orienta v4.2 PULSE
+Version: 4.2.0
+Tests: 38/38
+
+Archivos nuevos clave:
+- public/assets/admin-v420.css
+- public/assets/admin-v420.js
+- public/admin.html
+- supabase/v4_2_migration.sql
+- LEEME_V4_2_PULSE.md
+- INSTALAR_V4_2.md
+- PRUEBA_TOTAL_V4_2.md
+
+Funciones principales:
+Pulse, funnel, Live Journey Map, calendario, alertas, insights,
+centro del paciente, auditoria, tracking de tratamientos y fondo ambiental.

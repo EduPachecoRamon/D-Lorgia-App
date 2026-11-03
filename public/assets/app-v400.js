@@ -87,6 +87,19 @@ function getRemoteSession() {
   try { return JSON.parse(localStorage.getItem(REMOTE_SESSION_KEY) || sessionStorage.getItem(REMOTE_SESSION_KEY) || 'null'); }
   catch { return null; }
 }
+
+async function trackJourneyEvent(eventType, metadata = {}) {
+  const remote = getRemoteSession();
+  if (!remote?.access_token || !navigator.onLine) return false;
+  try {
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${remote.access_token}` },
+      body: JSON.stringify({ eventType, metadata })
+    });
+    return res.ok;
+  } catch { return false; }
+}
 function remoteSessionIsPersistent() { return Boolean(localStorage.getItem(REMOTE_SESSION_KEY)); }
 function saveRemoteSession(session, remember = true) {
   localStorage.removeItem(REMOTE_SESSION_KEY); sessionStorage.removeItem(REMOTE_SESSION_KEY);
@@ -802,6 +815,10 @@ function toggleSavedTreatment(id) {
   const saved = getSavedTreatments();
   const exists = saved.includes(id);
   setSavedTreatments(exists ? saved.filter((x) => x !== id) : [id, ...saved].slice(0, 12));
+  if (!exists) {
+    const treatment = catalog.find((x) => x.id === id);
+    trackJourneyEvent('treatment_saved', { treatment_id: id, treatment_name: treatment?.name || id, category: treatment?.category || '' });
+  }
   openDetail(id, false);
 }
 
@@ -809,6 +826,7 @@ function openDetail(id, push = true) {
   const treatment = catalog.find((x) => x.id === id);
   if (!treatment) return;
   selectedTreatment = id;
+  trackJourneyEvent('treatment_viewed', { treatment_id: id, treatment_name: treatment.name, category: treatment.category });
   const isSaved = getSavedTreatments().includes(id);
   const guideMatch = guideMatchFor(id);
   $('#detail-name').textContent = treatment.name;

@@ -1,35 +1,22 @@
-# D’Lorgia Orienta v4.0 — Admin + Base de datos
+# D’Lorgia Orienta v4.2 — Pulse
 
-Aplicación de orientación y acompañamiento para D’Lorgia. La v4 mantiene el diseño, Orientador Personal, Asesor, agenda, seguimiento, animaciones y resiliencia anteriores, pero añade una arquitectura real de cuentas y persistencia.
+D’Lorgia Orienta combina la app del paciente con un panel administrativo real conectado a **Supabase Auth + PostgreSQL**. La v4.2 conserva la arquitectura de v4.0/v4.1 y convierte `/admin` en un centro de operaciones y analítica del recorrido del paciente.
 
-## Novedades v4
+## v4.2 Pulse
 
-- **Supabase Auth** para cuentas multi-dispositivo.
-- **PostgreSQL** para perfiles, tratamientos, Orientador y citas.
-- **Roles `patient/admin`** validados en servidor.
-- **Panel `/admin`** para usuarios, citas y catálogo.
-- **Agenda persistente**: los horarios activos se bloquean en PostgreSQL.
-- **Catálogo administrable**: cambios del Admin alimentan Tratamientos y el Orientador Personal.
-- **Estado de cita real**: `pending`, `confirmed`, `completed`, `cancelled`.
-- **RLS + grants por columna** para evitar escalamiento de rol o confirmaciones desde una cuenta paciente.
-- **Modo degradado**: sin Supabase la app conserva el funcionamiento local del prototipo.
+- Dashboard premium con fondo ambiental animado por sección.
+- D’Lorgia Pulse: pendientes, pacientes nuevos, tendencia de orientaciones e interés destacado.
+- Funnel del recorrido: registro → Orientador → exploración → evaluación → confirmación → completado.
+- Live Journey Map.
+- Calendario administrativo mensual.
+- Centro de notificaciones y alertas operativas.
+- Insights automáticos basados en datos reales.
+- Centro de paciente con journey, afinidades y actividad reciente.
+- Auditoría administrativa y tracking de tratamientos explorados mediante `journey_events`.
+- Command Palette (`Ctrl + K`) y modo presentación.
+- Supabase Auth, roles `patient/admin`, RLS y PostgreSQL persistente.
 
-## Arquitectura
-
-```text
-Paciente / Admin
-       ↓
-D’Lorgia UI
-       ↓
-Node.js en Render
-  ├─ Supabase Auth
-  ├─ PostgreSQL
-  ├─ Orientador Personal
-  ├─ Gemini + fallback
-  └─ WhatsApp
-```
-
-## Ejecutar localmente
+## Ejecutar
 
 ```bash
 npm test
@@ -40,22 +27,17 @@ npm start
 - Admin: `http://localhost:3000/admin`
 - Health: `http://localhost:3000/health`
 
-Sin variables Supabase funciona en modo demo local.
+## Base de datos
 
-## Configurar la base de datos
+Para una instalación nueva ejecuta `supabase/schema.sql`.
 
-Lee **`CONFIGURAR_SUPABASE_V4.md`**.
+Si ya tienes la v4.0/v4.1 funcionando, **no repitas todo el schema**: ejecuta solamente:
 
-Archivos importantes:
+`supabase/v4_2_migration.sql`
 
-- `supabase/schema.sql`
-- `src/services/supabase.js`
-- `src/services/accounts.js`
-- `public/admin.html`
-- `public/assets/admin-v400.js`
-- `public/assets/app-v400.js`
+La migración añade `journey_events`; es opcional para el funcionamiento básico, pero necesaria para el funnel de exploración y la auditoría persistente.
 
-## Variables principales
+## Variables Render
 
 ```env
 SUPABASE_URL=
@@ -65,10 +47,10 @@ DLORGIA_ADMIN_EMAILS=
 GEMINI_API_KEY=
 ```
 
-La clave secreta nunca debe salir de Render/servidor.
+La clave secreta debe permanecer únicamente en Render/backend.
 
 ## Pruebas
 
-Construcción actual: **33/33**.
+La construcción v4.2 incluye **38 pruebas automatizadas**.
 
-Consulta `PRUEBA_TOTAL_V4.md` para el checklist conectado a Supabase.
+Consulta `PRUEBA_TOTAL_V4_2.md` y `LEEME_V4_2_PULSE.md`.

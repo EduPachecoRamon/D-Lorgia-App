@@ -205,6 +205,7 @@ async function reserveWithDatabase(req, body) {
       updated_at: new Date().toISOString()
     });
     const appointment = rows?.[0];
+    await logJourneyEvent({ userId: auth.user.id, actorId: auth.user.id, eventType: 'appointment_requested', source: 'patient', metadata: { appointment_id: appointment?.id || null, branch, date: body.date || null, time: body.time || null, treatment_id: body.treatmentId || null } });
     return {
       reservation: {
         id: reference, branch, branchName: schedule.branchName, date: body.date, time: body.time,
@@ -246,7 +247,9 @@ async function persistGuideIfAuthenticated(req, body, result) {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   });
-  return rows?.[0] || null;
+  const saved = rows?.[0] || null;
+  await logJourneyEvent({ userId: auth.user.id, actorId: auth.user.id, eventType: 'guide_completed', source: 'patient', metadata: { guide_id: saved?.id || null, goal: body?.goal || null, area: body?.area || null } });
+  return saved;
 }
 
 async function persistAppointmentIfAuthenticated(req, payload, reservation) {
@@ -267,6 +270,38 @@ async function persistAppointmentIfAuthenticated(req, payload, reservation) {
     updated_at: new Date().toISOString()
   });
   return rows?.[0] || null;
+}
+
+
+async function logJourneyEvent({ userId = null, actorId = null, eventType, source = 'system', metadata = {} } = {}) {
+  if (!eventType || !getSupabaseState().databaseConfigured) return null;
+  try {
+    const rows = await dbInsert('journey_events', {
+      user_id: userId || null,
+      actor_id: actorId || null,
+      event_type: String(eventType).slice(0, 80),
+      source: String(source || 'system').slice(0, 40),
+      metadata: metadata && typeof metadata === 'object' ? metadata : {},
+      created_at: new Date().toISOString()
+    });
+    return rows?.[0] || null;
+  } catch (error) {
+    // v4.2 mantiene compatibilidad con bases v4.0/v4.1 donde journey_events aún no existe.
+    if (!/journey_events|relation .* does not exist|schema cache/i.test(String(error.message || ''))) {
+      console.warn('[JOURNEY EVENT]', error.message);
+    }
+    return null;
+  }
+}
+
+async function readJourneyEvents() {
+  if (!getSupabaseState().databaseConfigured) return { items: [], available: false };
+  try {
+    const items = await dbSelect('journey_events', 'select=*&order=created_at.desc&limit=500');
+    return { items: items || [], available: true };
+  } catch (error) {
+    return { items: [], available: false, reason: 'migration-required' };
+  }
 }
 
 function publicSession(session = {}) {
@@ -299,7 +334,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/status') {
     return json(res, 200, {
       service: "D'Lorgia Orienta",
-      version: '4.1.0',
+      version: '4.2.0',
       status: 'ok',
       whatsappConfigured: Boolean(config.accessToken && config.phoneNumberId),
       aiConfigured: getAIState().configured,
@@ -399,11 +434,25 @@ const server = http.createServer(async (req, res) => {
     } catch (error) { return json(res, error.status || 400, { error: error.message }); }
   }
 
+
+  if (req.method === 'POST' && url.pathname === '/api/events') {
+    try {
+      const auth = await currentUser(req);
+      const body = await readJson(req);
+      const allowed = new Set(['treatment_viewed','treatment_saved']);
+      const eventType = String(body.eventType || '');
+      if (!allowed.has(eventType)) return json(res, 400, { error: 'Evento no permitido.' });
+      const event = await logJourneyEvent({ userId: auth.user.id, actorId: auth.user.id, eventType, source: 'patient', metadata: body.metadata || {} });
+      return json(res, 201, { ok: true, persisted: Boolean(event) });
+    } catch (error) { return json(res, error.status || 400, { error: error.message }); }
+  }
+
   if (url.pathname.startsWith('/api/admin/')) {
     if (!authState().configured) return json(res, 503, { error: 'Supabase todavía no está configurado.' });
     try {
-      await requireAdmin(req);
+      const adminAuth = await requireAdmin(req);
       if (req.method === 'GET' && url.pathname === '/api/admin/overview') return json(res, 200, await adminOverview());
+      if (req.method === 'GET' && url.pathname === '/api/admin/events') return json(res, 200, await readJourneyEvents());
       if (req.method === 'GET' && url.pathname === '/api/admin/users') {
         const rows = await dbSelect('profiles', 'select=id,email,username,name,role,branch,created_at,updated_at&order=created_at.desc&limit=200');
         return json(res, 200, { items: rows });
@@ -430,12 +479,14 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'POST' && url.pathname === '/api/admin/treatments/seed') {
         const rows = await dbInsert('treatments', orientationCatalog.map(catalogRow), { upsert: true, onConflict: 'id' });
+        await logJourneyEvent({ actorId: adminAuth.user.id, eventType: 'catalog_seeded', source: 'admin', metadata: { count: orientationCatalog.length } });
         return json(res, 200, { items: rows, seeded: orientationCatalog.length });
       }
       if (req.method === 'POST' && url.pathname === '/api/admin/treatments') {
         const body = await readJson(req);
         if (!body.id || !body.name || !body.category) return json(res, 400, { error: 'ID, nombre y categoría son obligatorios.' });
         const rows = await dbInsert('treatments', { ...catalogRow(body), id: String(body.id).trim().slice(0,60), active: body.active !== false }, { upsert: true, onConflict: 'id' });
+        await logJourneyEvent({ actorId: adminAuth.user.id, eventType: 'treatment_saved', source: 'admin', metadata: { treatment_id: String(body.id).trim().slice(0,60), name: body.name } });
         return json(res, 201, { item: rows?.[0] || null });
       }
       const appointmentMatch = url.pathname.match(/^\/api\/admin\/appointments\/([^/]+)$/);
@@ -444,7 +495,9 @@ const server = http.createServer(async (req, res) => {
         const allowed = new Set(['pending','confirmed','completed','cancelled']);
         if (!allowed.has(body.status)) return json(res, 400, { error: 'Estado de cita inválido.' });
         const rows = await dbUpdate('appointments', eq('id', appointmentMatch[1]), { status: body.status, updated_at: new Date().toISOString() });
-        return json(res, 200, { item: rows?.[0] || null });
+        const item = rows?.[0] || null;
+        await logJourneyEvent({ userId: item?.user_id || null, actorId: adminAuth.user.id, eventType: 'appointment_status_changed', source: 'admin', metadata: { appointment_id: appointmentMatch[1], status: body.status } });
+        return json(res, 200, { item });
       }
       const treatmentMatch = url.pathname.match(/^\/api\/admin\/treatments\/([^/]+)$/);
       if (req.method === 'PATCH' && treatmentMatch) {
@@ -452,6 +505,7 @@ const server = http.createServer(async (req, res) => {
         const patch = { updated_at: new Date().toISOString() };
         for (const key of ['name','category','short','description','objective','recovery','intensity','active','sort_order','goals']) if (body[key] !== undefined) patch[key] = body[key];
         const rows = await dbUpdate('treatments', eq('id', treatmentMatch[1]), patch);
+        await logJourneyEvent({ actorId: adminAuth.user.id, eventType: 'treatment_updated', source: 'admin', metadata: { treatment_id: treatmentMatch[1], fields: Object.keys(body || {}) } });
         return json(res, 200, { item: rows?.[0] || null });
       }
       return json(res, 404, { error: 'Ruta administrativa no encontrada.' });

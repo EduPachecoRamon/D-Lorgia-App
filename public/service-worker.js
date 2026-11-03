@@ -1,9 +1,12 @@
-const CACHE = 'dlorgia-orienta-v400-admin-database';
+const CACHE = 'dlorgia-orienta-v420-pulse';
 const CORE = [
   '/app', '/',
   '/assets/styles-v400.css',
   '/assets/app-v400.js',
-  '/manifest.webmanifest'
+  '/manifest.webmanifest',
+  '/admin',
+  '/assets/admin-v420.css',
+  '/assets/admin-v420.js'
 ];
 
 self.addEventListener('install', (event) => {

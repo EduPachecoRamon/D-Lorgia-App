@@ -9,7 +9,7 @@ import { authState } from '../src/services/accounts.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const adminHtml = fs.readFileSync(path.join(root, 'public/admin.html'), 'utf8');
-const adminJs = fs.readFileSync(path.join(root, 'public/assets/admin-v410.js'), 'utf8');
+const adminJs = fs.readFileSync(path.join(root, 'public/assets/admin-v420.js'), 'utf8');
 const schema = fs.readFileSync(path.join(root, 'supabase/schema.sql'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'public/assets/app-v400.js'), 'utf8');
 
@@ -51,6 +51,13 @@ test('panel administrativo permite operar usuarios, citas y catálogo', () => {
   assert.match(adminJs, /\/api\/admin\/guides/);
   assert.match(adminJs, /\/api\/admin\/appointments/);
   assert.match(adminJs, /\/api\/admin\/treatments\/seed/);
+  assert.match(adminJs, /renderPulse/);
+  assert.match(adminJs, /renderFunnel/);
+  assert.match(adminJs, /renderCalendar/);
+  assert.match(adminJs, /renderNotifications/);
+  assert.match(adminJs, /renderAudit/);
+  assert.match(server, /\/api\/admin\/events/);
+  assert.match(schema, /journey_events/);
 });
 
 test('frontend v4 sincroniza perfil remoto y conserva cache local', () => {
