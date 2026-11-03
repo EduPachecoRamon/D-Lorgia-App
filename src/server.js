@@ -299,7 +299,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/status') {
     return json(res, 200, {
       service: "D'Lorgia Orienta",
-      version: '4.0.0',
+      version: '4.1.0',
       status: 'ok',
       whatsappConfigured: Boolean(config.accessToken && config.phoneNumberId),
       aiConfigured: getAIState().configured,
@@ -407,6 +407,14 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && url.pathname === '/api/admin/users') {
         const rows = await dbSelect('profiles', 'select=id,email,username,name,role,branch,created_at,updated_at&order=created_at.desc&limit=200');
         return json(res, 200, { items: rows });
+      }
+      if (req.method === 'GET' && url.pathname === '/api/admin/guides') {
+        const [rows, profiles] = await Promise.all([
+          dbSelect('personal_guides', 'select=id,user_id,payload,result,created_at,updated_at&order=created_at.desc&limit=200'),
+          dbSelect('profiles', 'select=id,name,email,username')
+        ]);
+        const byId = new Map((profiles || []).map((profile) => [profile.id, profile]));
+        return json(res, 200, { items: (rows || []).map((item) => ({ ...item, patient: byId.get(item.user_id) || null })) });
       }
       if (req.method === 'GET' && url.pathname === '/api/admin/appointments') {
         const [rows, profiles] = await Promise.all([

@@ -3,72 +3,167 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#1f5548" />
+  <meta name="theme-color" content="#173f35" />
   <title>D’Lorgia Admin</title>
-  <link rel="stylesheet" href="/assets/admin-v400.css" />
+  <link rel="stylesheet" href="/assets/admin-v410.css" />
 </head>
 <body>
-  <div class="admin-shell">
-    <header class="admin-topbar">
-      <div class="admin-brand"><span class="mark">DL</span><span><small>D’LORGIA</small><strong>Admin</strong></span></div>
-      <div class="admin-session hidden" id="admin-session"><span id="admin-user"></span><button id="admin-logout">Cerrar sesión</button></div>
-    </header>
-
-    <main>
-      <section class="login-panel" id="admin-login-panel">
-        <div class="login-copy"><span class="eyebrow">ACCESO ADMINISTRATIVO</span><h1>Controla el recorrido sin perder de vista al paciente.</h1><p>La cuenta debe tener el rol <b>admin</b> en PostgreSQL. Las credenciales se validan con Supabase Auth.</p></div>
-        <form id="admin-login-form" class="admin-card form-grid">
-          <label>Correo o usuario<input id="admin-login-user" autocomplete="username" required /></label>
-          <label>Clave<input id="admin-login-password" type="password" autocomplete="current-password" required /></label>
-          <button class="primary" type="submit">Ingresar al panel</button>
-          <p class="feedback" id="admin-login-feedback"></p>
-          <a href="/app" class="text-link">← Volver a la app</a>
-        </form>
-      </section>
-
-      <section class="dashboard hidden" id="admin-dashboard">
-        <div class="dashboard-head"><div><span class="eyebrow">PANEL DE CONTROL</span><h1>Operación D’Lorgia</h1><p id="db-state">Conectando con PostgreSQL…</p></div><button class="secondary" id="refresh-admin">Actualizar</button></div>
-
-        <div class="stats" id="admin-stats">
-          <article><small>USUARIOS</small><strong>—</strong></article><article><small>ORIENTADORES</small><strong>—</strong></article><article><small>CITAS</small><strong>—</strong></article><article><small>PENDIENTES</small><strong>—</strong></article>
-        </div>
-
-        <nav class="admin-tabs">
-          <button class="active" data-admin-tab="appointments">Citas</button>
-          <button data-admin-tab="users">Usuarios</button>
-          <button data-admin-tab="treatments">Tratamientos</button>
-        </nav>
-
-        <section class="admin-section active" data-admin-panel="appointments">
-          <div class="section-head"><div><span class="eyebrow">AGENDA</span><h2>Solicitudes y estados</h2></div><span class="pill">Paciente ↔ Admin</span></div>
-          <div id="appointments-table" class="table-wrap"></div>
-        </section>
-
-        <section class="admin-section" data-admin-panel="users">
-          <div class="section-head"><div><span class="eyebrow">CUENTAS</span><h2>Usuarios registrados</h2></div></div>
-          <div id="users-table" class="table-wrap"></div>
-        </section>
-
-        <section class="admin-section" data-admin-panel="treatments">
-          <div class="section-head"><div><span class="eyebrow">CATÁLOGO</span><h2>Tratamientos publicados</h2></div><button class="secondary" id="seed-treatments">Cargar catálogo base</button></div>
-          <form id="treatment-form" class="admin-card treatment-form">
-            <input id="t-id" placeholder="ID: limpieza-premium" required />
-            <input id="t-name" placeholder="Nombre" required />
-            <input id="t-category" placeholder="Categoría" required />
-            <input id="t-short" placeholder="Descripción corta" />
-            <input id="t-objective" placeholder="Objetivo general" />
-            <input id="t-goals" placeholder="Metas: textura,cuidado" />
-            <input id="t-recovery" placeholder="Recuperación general" />
-            <select id="t-intensity"><option value="">Intensidad general</option><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option></select>
-            <button class="primary" type="submit">Guardar tratamiento</button>
-          </form>
-          <div id="treatments-table" class="table-wrap"></div>
-        </section>
-      </section>
-    </main>
-
-    <div class="admin-toast" id="admin-toast"></div>
+  <div class="intro-curtain" id="intro-curtain" aria-hidden="true">
+    <div class="intro-mark"><span>DL</span></div>
+    <div class="intro-copy"><b>D’LORGIA</b><small>ADMINISTRATION</small></div>
+    <div class="intro-line"></div>
   </div>
-  <script type="module" src="/assets/admin-v400.js"></script>
+
+  <section class="login-stage" id="admin-login-panel">
+    <div class="login-art" aria-hidden="true">
+      <div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div>
+      <div class="login-emblem">DL</div>
+    </div>
+    <div class="login-copy">
+      <span class="eyebrow">ACCESO ADMINISTRATIVO</span>
+      <h1>Operación clara.<br/>Atención humana.</h1>
+      <p>Gestiona pacientes, citas, orientaciones y tratamientos desde una sola vista conectada a D’Lorgia.</p>
+      <form id="admin-login-form" class="login-card">
+        <label>Correo o usuario<input id="admin-login-user" autocomplete="username" required /></label>
+        <label>Clave<input id="admin-login-password" type="password" autocomplete="current-password" required /></label>
+        <button class="primary wide" type="submit">Ingresar al panel</button>
+        <p class="feedback" id="admin-login-feedback"></p>
+        <a href="/app" class="text-link">← Volver a la app</a>
+      </form>
+    </div>
+  </section>
+
+  <div class="admin-app hidden" id="admin-dashboard">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-lockup">
+        <span class="brand-mark">DL</span>
+        <span class="brand-copy"><small>D’LORGIA</small><strong>Admin</strong></span>
+      </div>
+
+      <nav class="side-nav" aria-label="Navegación administrativa">
+        <button class="nav-item active" data-view="overview" data-command="Resumen"><span class="nav-icon">⌂</span><span>Resumen</span><kbd>1</kbd></button>
+        <button class="nav-item" data-view="appointments" data-command="Citas"><span class="nav-icon">◷</span><span>Citas</span><kbd>2</kbd></button>
+        <button class="nav-item" data-view="patients" data-command="Pacientes"><span class="nav-icon">◎</span><span>Pacientes</span><kbd>3</kbd></button>
+        <button class="nav-item" data-view="guides" data-command="Orientaciones"><span class="nav-icon">✦</span><span>Orientaciones</span><kbd>4</kbd></button>
+        <button class="nav-item" data-view="treatments" data-command="Tratamientos"><span class="nav-icon">◇</span><span>Tratamientos</span><kbd>5</kbd></button>
+        <button class="nav-item" data-view="settings" data-command="Configuración"><span class="nav-icon">⚙</span><span>Configuración</span><kbd>6</kbd></button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button class="command-hint" id="open-command"><span>Buscar o ejecutar</span><kbd>Ctrl K</kbd></button>
+        <div class="connection-card"><span class="live-dot"></span><div><b id="sidebar-connection">Conectado</b><small>Supabase + PostgreSQL</small></div></div>
+        <a class="back-app" href="/app">← Ver app del paciente</a>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button class="icon-button mobile-only" id="toggle-sidebar" aria-label="Abrir navegación">☰</button>
+        <div class="breadcrumbs"><span>D’Lorgia</span><b id="current-view-label">Resumen</b></div>
+        <div class="top-actions">
+          <button class="ghost-button" id="presentation-mode" title="Modo presentación">Presentar</button>
+          <button class="icon-button" id="refresh-admin" title="Actualizar">↻</button>
+          <div class="admin-session" id="admin-session">
+            <div class="avatar" id="admin-avatar">A</div>
+            <div><b id="admin-user">Administrador</b><small>Administrador</small></div>
+            <button class="session-menu" id="admin-logout">Salir</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <section class="view active" data-panel="overview">
+          <div class="hero-row reveal">
+            <div><span class="eyebrow">PANEL DE CONTROL</span><h1 id="welcome-title">Buenos días.</h1><p>Un vistazo rápido al recorrido de tus pacientes y a lo que necesita atención ahora.</p></div>
+            <div class="system-pill"><span class="live-dot"></span><span id="db-state">Conectando con PostgreSQL…</span></div>
+          </div>
+
+          <div class="kpi-grid" id="admin-stats">
+            <article class="kpi-card reveal" style="--delay:.05s"><span class="kpi-icon">◎</span><small>PACIENTES</small><strong data-kpi="users">—</strong><em>Perfiles registrados</em></article>
+            <article class="kpi-card reveal" style="--delay:.10s"><span class="kpi-icon">✦</span><small>ORIENTACIONES</small><strong data-kpi="guides">—</strong><em>Orientadores completados</em></article>
+            <article class="kpi-card reveal" style="--delay:.15s"><span class="kpi-icon">◷</span><small>CITAS</small><strong data-kpi="appointments">—</strong><em>Solicitudes totales</em></article>
+            <article class="kpi-card reveal accent" style="--delay:.20s"><span class="kpi-icon">!</span><small>PENDIENTES</small><strong data-kpi="pendingAppointments">—</strong><em>Requieren atención</em></article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="panel-card span-7 reveal" style="--delay:.22s">
+              <div class="panel-head"><div><span class="eyebrow">AGENDA</span><h2>Próximas citas</h2></div><button class="text-button" data-go="appointments">Ver todas →</button></div>
+              <div id="next-appointments" class="appointment-cards skeleton-zone"></div>
+            </article>
+            <article class="panel-card span-5 reveal" style="--delay:.26s">
+              <div class="panel-head"><div><span class="eyebrow">ESTA SEMANA</span><h2>Pulso de agenda</h2></div><span class="soft-badge">7 días</span></div>
+              <div id="week-pulse" class="week-pulse skeleton-zone"></div>
+            </article>
+            <article class="panel-card span-7 reveal" style="--delay:.30s">
+              <div class="panel-head"><div><span class="eyebrow">ACTIVIDAD</span><h2>Movimiento reciente</h2></div><span class="live-label"><span class="live-dot"></span>En vivo</span></div>
+              <div id="activity-feed" class="activity-feed skeleton-zone"></div>
+            </article>
+            <article class="panel-card span-5 reveal" style="--delay:.34s">
+              <div class="panel-head"><div><span class="eyebrow">ACCESOS</span><h2>Acciones rápidas</h2></div></div>
+              <div class="quick-grid">
+                <button data-go="appointments"><span>◷</span><b>Gestionar citas</b><small>Estados y agenda</small></button>
+                <button data-action="new-treatment"><span>＋</span><b>Nuevo tratamiento</b><small>Agregar al catálogo</small></button>
+                <button data-go="patients"><span>◎</span><b>Ver pacientes</b><small>Recorrido y perfil</small></button>
+                <button data-go="guides"><span>✦</span><b>Orientaciones</b><small>Insights del Orientador</small></button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-panel="appointments">
+          <div class="page-head reveal"><div><span class="eyebrow">AGENDA</span><h1>Citas</h1><p>Prioriza solicitudes y acompaña cada evaluación desde pendiente hasta completada.</p></div><div class="head-actions"><button class="ghost-button" data-filter-appt="pending">Ver pendientes</button></div></div>
+          <div class="toolbar reveal"><div class="search-box"><span>⌕</span><input id="appointment-search" placeholder="Buscar paciente, interés o sede…" /></div><div class="filter-chips" id="appointment-filters"><button class="active" data-appt-filter="all">Todas</button><button data-appt-filter="pending">Pendientes</button><button data-appt-filter="confirmed">Confirmadas</button><button data-appt-filter="completed">Completadas</button><button data-appt-filter="cancelled">Canceladas</button></div></div>
+          <div id="appointments-table" class="data-surface reveal skeleton-zone"></div>
+        </section>
+
+        <section class="view" data-panel="patients">
+          <div class="page-head reveal"><div><span class="eyebrow">PERSONAS</span><h1>Pacientes</h1><p>Consulta perfiles, su avance en el recorrido y las interacciones más recientes.</p></div></div>
+          <div class="toolbar reveal"><div class="search-box"><span>⌕</span><input id="patient-search" placeholder="Buscar por nombre, correo o usuario…" /></div><span class="soft-badge" id="patient-count">0 pacientes</span></div>
+          <div id="users-table" class="data-surface reveal skeleton-zone"></div>
+        </section>
+
+        <section class="view" data-panel="guides">
+          <div class="page-head reveal"><div><span class="eyebrow">ORIENTADOR PERSONAL</span><h1>Orientaciones</h1><p>Convierte respuestas del Orientador en señales útiles para comprender necesidades y siguientes pasos.</p></div></div>
+          <div id="guide-insights" class="insight-grid reveal"></div>
+          <div class="panel-card reveal"><div class="panel-head"><div><span class="eyebrow">HISTORIAL</span><h2>Orientaciones recientes</h2></div></div><div id="guides-table" class="skeleton-zone"></div></div>
+        </section>
+
+        <section class="view" data-panel="treatments">
+          <div class="page-head reveal"><div><span class="eyebrow">CATÁLOGO</span><h1>Tratamientos</h1><p>Administra la información que alimenta la app y las afinidades del Orientador Personal.</p></div><div class="head-actions"><button class="ghost-button" id="seed-treatments">Cargar catálogo base</button><button class="primary" data-action="new-treatment">＋ Nuevo tratamiento</button></div></div>
+          <div class="toolbar reveal"><div class="search-box"><span>⌕</span><input id="treatment-search" placeholder="Buscar tratamiento o categoría…" /></div><div class="filter-chips"><button class="active" data-treatment-filter="all">Todos</button><button data-treatment-filter="active">Activos</button><button data-treatment-filter="inactive">Inactivos</button></div></div>
+          <div id="treatments-table" class="treatment-grid reveal skeleton-zone"></div>
+        </section>
+
+        <section class="view" data-panel="settings">
+          <div class="page-head reveal"><div><span class="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado técnico resumido para verificar que el entorno administrativo esté sano.</p></div></div>
+          <div class="settings-grid">
+            <article class="panel-card reveal"><span class="eyebrow">CONEXIONES</span><h2>Estado del sistema</h2><div id="system-checks" class="system-checks"></div></article>
+            <article class="panel-card reveal"><span class="eyebrow">SESIÓN</span><h2>Cuenta administrativa</h2><div id="account-card" class="account-card"></div></article>
+            <article class="panel-card reveal"><span class="eyebrow">PRESENTACIÓN</span><h2>Vista limpia</h2><p class="muted">Oculta controles secundarios para enseñar el proyecto sin ruido visual.</p><button class="primary" id="presentation-mode-card">Activar modo presentación</button></article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+  <aside class="detail-drawer" id="detail-drawer" aria-hidden="true"><div class="drawer-head"><div><span class="eyebrow" id="drawer-eyebrow">DETALLE</span><h2 id="drawer-title">Detalle</h2></div><button class="icon-button" id="close-drawer">×</button></div><div id="drawer-content" class="drawer-content"></div></aside>
+
+  <div class="modal-backdrop hidden" id="treatment-modal-backdrop"></div>
+  <section class="modal" id="treatment-modal" aria-hidden="true">
+    <div class="modal-head"><div><span class="eyebrow">CATÁLOGO</span><h2 id="treatment-modal-title">Nuevo tratamiento</h2></div><button class="icon-button" id="close-treatment-modal">×</button></div>
+    <form id="treatment-form" class="treatment-form">
+      <label>ID<input id="t-id" placeholder="limpieza-premium" required /></label><label>Nombre<input id="t-name" placeholder="Nombre del tratamiento" required /></label><label>Categoría<input id="t-category" placeholder="Piel, corporal…" required /></label>
+      <label class="wide-field">Descripción corta<input id="t-short" placeholder="Resumen para el paciente" /></label><label class="wide-field">Objetivo general<input id="t-objective" placeholder="Qué busca acompañar este tratamiento" /></label><label class="wide-field">Metas<input id="t-goals" placeholder="textura, luminosidad, cuidado" /></label>
+      <label>Recuperación<input id="t-recovery" placeholder="General" /></label><label>Intensidad<select id="t-intensity"><option value="">Sin definir</option><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option></select></label>
+      <div class="modal-actions"><button type="button" class="ghost-button" id="cancel-treatment-modal">Cancelar</button><button class="primary" type="submit">Guardar tratamiento</button></div>
+    </form>
+  </section>
+
+  <div class="command-backdrop hidden" id="command-backdrop"></div>
+  <section class="command-palette" id="command-palette" aria-hidden="true"><div class="command-search"><span>⌕</span><input id="command-input" placeholder="Ir a una sección o ejecutar una acción…" autocomplete="off"/><kbd>ESC</kbd></div><div id="command-results" class="command-results"></div><div class="command-foot"><span>↑↓ navegar</span><span>Enter seleccionar</span><span>Ctrl K abrir</span></div></section>
+
+  <div class="admin-toast" id="admin-toast"><span id="toast-message"></span><button id="toast-action" class="hidden"></button></div>
+  <script type="module" src="/assets/admin-v410.js"></script>
 </body>
 </html>
