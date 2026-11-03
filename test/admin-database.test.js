@@ -9,7 +9,7 @@ import { authState } from '../src/services/accounts.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const adminHtml = fs.readFileSync(path.join(root, 'public/admin.html'), 'utf8');
-const adminJs = fs.readFileSync(path.join(root, 'public/assets/admin-v400.js'), 'utf8');
+const adminJs = fs.readFileSync(path.join(root, 'public/assets/admin-v410.js'), 'utf8');
 const schema = fs.readFileSync(path.join(root, 'supabase/schema.sql'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'public/assets/app-v400.js'), 'utf8');
 
@@ -42,9 +42,13 @@ test('schema PostgreSQL contiene roles, tratamientos, orientador y citas con RLS
 
 test('panel administrativo permite operar usuarios, citas y catálogo', () => {
   assert.match(adminHtml, /D’Lorgia Admin/);
-  assert.match(adminHtml, /data-admin-panel="appointments"/);
-  assert.match(adminHtml, /data-admin-panel="users"/);
-  assert.match(adminHtml, /data-admin-panel="treatments"/);
+  assert.match(adminHtml, /data-panel="appointments"/);
+  assert.match(adminHtml, /data-panel="patients"/);
+  assert.match(adminHtml, /data-panel="guides"/);
+  assert.match(adminHtml, /data-panel="treatments"/);
+  assert.match(adminHtml, /id="command-palette"/);
+  assert.match(adminJs, /patientJourney/);
+  assert.match(adminJs, /\/api\/admin\/guides/);
   assert.match(adminJs, /\/api\/admin\/appointments/);
   assert.match(adminJs, /\/api\/admin\/treatments\/seed/);
 });
